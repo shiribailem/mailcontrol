@@ -1,0 +1,14 @@
+{
+  "HOST": "mail.example.com",
+  "USERNAME": "username",
+  "PASSWORD": "password",
+  "SSL": true,
+  "debug": 10,
+  "idle_timeout": 60,
+  "database": {
+    "host": "server",
+    "user": "user",
+    "password": "password",
+    "database": "database"
+  }
+}
