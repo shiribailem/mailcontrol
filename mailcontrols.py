@@ -10,6 +10,8 @@ import MySQLdb
 import MySQLdb.cursors
 import socket
 
+from mailcontrol.loghandler import logworker, loghandler
+
 socket.setdefaulttimeout(30)
 
 class DB:
@@ -45,14 +47,14 @@ class DB:
             resultcount = cursor.execute(sql)
         return resultcount, cursor
 
-class logs:
-    def __init__(self, plugin, debug_level=0):
-        self.plugin = plugin.upper()
-        self.debug = debug_level
-
-    def output(self,msg, debug_level=0):
-        if debug_level <= self.debug:
-            print("%s %s: %s" %(datetime.now().isoformat(), self.plugin, msg))
+#class logs:
+#    def __init__(self, plugin, debug_level=0):
+#        self.plugin = plugin.upper()
+#        self.debug = debug_level
+#
+#    def output(self,msg, debug_level=0):
+#        if debug_level <= self.debug:
+#            print("%s %s: %s" %(datetime.now().isoformat(), self.plugin, msg))
 
 def server_login(config):
     server = IMAPClient(config['HOST'], use_uid=True, ssl=config['SSL'])
@@ -84,14 +86,17 @@ print("Ignoring emails received prior to program start, %d ignored." %(len(past_
 plugins = []
 filters = []
 
+logthread = logworker(debug_level=config['debug'])
+logthread.start()
+
 with open('plugins.txt','r') as pluginindex:
     for line in pluginindex.readlines():
         try:
             tempmod = __import__('plugins.' + line.strip(), fromlist=[''])
             plugins.append(tempmod)
-            filters.append(tempmod.mailfilter(server, logs(line.strip(), config['debug']), db=dbhandle))
+            filters.append(tempmod.mailfilter(server, loghandler(line.strip(), logqueue=logthread.queue), db=dbhandle))
         except:
-            logs("PLUGINS",config['debug']).output("Error initializing plugin %s.\n%s" % (line.strip(),traceback.format_exc()),0)
+            loghandler("PLUGINS",logthread.queue).output("Error initializing plugin %s.\n%s" % (line.strip(),traceback.format_exc()),0)
 
 print("%d Plugins Loaded." % (len(plugins)))
 
@@ -103,27 +108,27 @@ while True:
 
     if messages == past_emails:
         try:
-            logs('IDLE',config['debug']).output("Entering Idle",5)
+            loghandler('IDLE',logqueue=logthread.queue).output("Entering Idle",5)
             server.idle()
             error = False
             idle_debug = server.idle_check(config['idle_timeout'])
-            logs('IDLE',config['debug']).output(idle_debug,5)
+            loghandler('IDLE',logqueue=logthread.queue).output(idle_debug,5)
             server.idle_done()
         except:
             if config['debug'] > 0:
-                logs('IDLE', config['debug']).output(traceback.format_exc(), 1)
+                loghandler('IDLE',logqueue=logthread.queue).output(traceback.format_exc(), 1)
             server = server_login(config)
     else:
-        logs('IDLE',config['debug']).output("Skipping idle as new activity received during last plugin run.",4)
+        loghandler('IDLE',logqueue=logthread.queue).output("Skipping idle as new activity received during last plugin run.",4)
 
     error = False
 
     try:
-        logs('SERVER',config['debug']).output("Searching for new emails.", 4)
+        loghandler('SERVER',logqueue=logthread.queue).output("Searching for new emails.", 4)
         messages = server.search()
     except:
         error = True
-        logs('SEARCH',config['debug']).output("Error checking message list. Reconnecting Server.", 5)
+        loghandler('SEARCH',logqueue=logthread.queue).output("Error checking message list. Reconnecting Server.", 5)
         try:
             server = server_login(config)
         except:
@@ -143,5 +148,5 @@ while True:
                         if not mailfilter.filter(server, msgid, header):
                             break
                     except:
-                        logs('PLUGINS', config['debug']).output("Error Executing plugin.\n" + traceback.format_exc(),1)
+                        loghandler('PLUGINS',logqueue=logthread.queue).output("Error Executing plugin.\n" + traceback.format_exc(),1)
         past_emails = messages
