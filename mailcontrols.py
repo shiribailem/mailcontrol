@@ -1,60 +1,87 @@
 #!/usr/bin/python -u
-__author__ = 'tmajibon'
+# ^ -u added as I typically run this using supervisor and it complained about it.
 
+# IMAPClient for obvious reasons.
+# email.parser for breaking out email headers into dict objects
+# json because I like using that for config files, might change it out for
+#     ini at some later time for "user-friendliness"
+# traceback to catch errors and give the option to add more info in debug
+#     output
+# MySQLdb for database connections (of course), will likely later move it to
+#     another module when I add a more complex system for database handling
+# MySQLdb.cursors just so I can make the dict cursor available in the master
+#     object, even though nothing is using it right now
+# Socket just to change some socket defaults
 from imapclient import IMAPClient
 from email.parser import HeaderParser
 import json
 import traceback
-from datetime import datetime, timedelta
 import MySQLdb
 import MySQLdb.cursors
 import socket
 
+# loghandler object contains background thread and object to handle logging
+#     without plugins having to understand or support logging configuration
 from mailcontrol.loghandler import logworker, loghandler
 
+# Set a default timeout because some of these server connections can hang.
 socket.setdefaulttimeout(30)
 
+# Master object serving as a database handler to wrap up advanced behaviors
+# and configurations for use later (especially in plugins).
 class DB:
+    # default connection object, this should be overwritten almost right away.
     conn = None
 
+    # put config data into object on init, if you can't guess what these
+    # options are, then you probably shouldn't be using databases.
     def __init__(self, host, user, password, database):
         self.host = host
         self.user = user
         self.password = password
         self.database = database
 
+    # simple routine to connect to database and make sure database post-connect
+    # settings are set.
     def connect(self):
-        self.conn = MySQLdb.connect(self.host, self.user, self.password, self.database)
+        # connect to database
+        self.conn = MySQLdb.connect\
+            (self.host, self.user, self.password, self.database)
+        # set autocommit as none of the plugins should be writing to the
+        # database by default, but other things may be writing to the
+        # database elsewhere and we want to read them.
         self.conn.autocommit(True)
 
+    # wrapper for sql queries
     def query(self, sql):
+        # First try to get a cursor and perform the query immediately
         try:
             cursor = self.conn.cursor()
             resultcount = cursor.execute(sql)
+        # on failure, connection likely timed out (because we're not
+        # closing them anywhere), reconnect and try again.
+        # a second failure is definitely a failure and should be
+        # allowed to fail.
         except (AttributeError, MySQLdb.OperationalError):
             self.connect()
             cursor = self.conn.cursor()
             resultcount = cursor.execute(sql)
+
+        # return the resultcount with the cursor because many queries are only
+        # going to be needing to know if there are results without having to
+        # collect them.
         return resultcount, cursor
 
+    # see query function, identical save for usage of DictCursor.
     def dictquery(self, sql):
         try:
             cursor = self.conn.cursor(MySQLdb.cursors.DictCursor)
             resultcount = cursor.execute(sql)
         except (AttributeError, MySQLdb.OperationalError):
             self.connect()
-            cursor = self.conn.cursor()
+            cursor = self.conn.cursor(MySQLdb.cursors.DictCursor)
             resultcount = cursor.execute(sql)
         return resultcount, cursor
-
-#class logs:
-#    def __init__(self, plugin, debug_level=0):
-#        self.plugin = plugin.upper()
-#        self.debug = debug_level
-#
-#    def output(self,msg, debug_level=0):
-#        if debug_level <= self.debug:
-#            print("%s %s: %s" %(datetime.now().isoformat(), self.plugin, msg))
 
 def server_login(config):
     server = IMAPClient(config['HOST'], use_uid=True, ssl=config['SSL'])
