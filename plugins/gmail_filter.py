@@ -27,7 +27,7 @@ class mailfilter:
 
         for address in addresses:
             if '+' in address:
-                tag = address.split('+')[1].split('@')[0].lower()
+                tag = address.split("<")[-1].split('+')[1].split('@')[0].lower()
 
                 self.loghandler.output("Found tag: " + tag, 1)
 
