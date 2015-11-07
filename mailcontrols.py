@@ -52,11 +52,15 @@ class DB:
         # database elsewhere and we want to read them.
         self.conn.autocommit(True)
 
-    # wrapper for sql queries
-    def query(self, sql):
+    # wrapper for sql queries, returns number of results and cursor
+    # object.
+    # dictionary true makes the returned cursor object a dictcursor
+    def query(self, sql, dictionary=False):
         # First try to get a cursor and perform the query immediately
         try:
-            cursor = self.conn.cursor()
+            # buffered=True is set as many queries don't need the row results
+            # and apparently it can cause errors if you don't get them.
+            cursor = self.conn.cursor(dictionary=dictionary, buffered=True)
             resultcount = cursor.execute(sql)
         # on failure, connection likely timed out (because we're not
         # closing them anywhere), reconnect and try again.
@@ -64,23 +68,12 @@ class DB:
         # allowed to fail.
         except (AttributeError, MySQLdb.OperationalError):
             self.connect()
-            cursor = self.conn.cursor()
+            cursor = self.conn.cursor(dictionary=dictionary, buffered=True)
             resultcount = cursor.execute(sql)
 
         # return the resultcount with the cursor because many queries are only
         # going to be needing to know if there are results without having to
         # collect them.
-        return resultcount, cursor
-
-    # see query function, identical save for usage of DictCursor.
-    def dictquery(self, sql):
-        try:
-            cursor = self.conn.cursor(MySQLdb.cursors.DictCursor)
-            resultcount = cursor.execute(sql)
-        except (AttributeError, MySQLdb.OperationalError):
-            self.connect()
-            cursor = self.conn.cursor(MySQLdb.cursors.DictCursor)
-            resultcount = cursor.execute(sql)
         return resultcount, cursor
 
 def server_login(config):
