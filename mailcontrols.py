@@ -9,15 +9,12 @@
 #     output
 # MySQLdb for database connections (of course), will likely later move it to
 #     another module when I add a more complex system for database handling
-# MySQLdb.cursors just so I can make the dict cursor available in the master
-#     object, even though nothing is using it right now
 # Socket just to change some socket defaults
 from imapclient import IMAPClient
 from email.parser import HeaderParser
 import json
 import traceback
 import MySQLdb
-import MySQLdb.cursors
 import socket
 # loghandler object contains background thread and object to handle logging
 #     without plugins having to understand or support logging configuration
@@ -58,11 +55,16 @@ class DB:
     # object.
     # dictionary true makes the returned cursor object a dictcursor
     def query(self, sql, dictionary=False):
+
+        # Allow selecting dictionary cursor by setting dictionary to True
+        if dictionary:
+            cursortype = MySQLdb.cursors.DictCursor
+        else:
+            cursortype = MySQLdb.cursors.Cursor
+
         # First try to get a cursor and perform the query immediately
         try:
-            # buffered=True is set as many queries don't need the row results
-            # and apparently it can cause errors if you don't get them.
-            cursor = self.conn.cursor(dictionary=dictionary, buffered=True)
+            cursor = self.conn.cursor(cursortype)
             resultcount = cursor.execute(sql)
         # on failure, connection likely timed out (because we're not
         # closing them anywhere), reconnect and try again.
