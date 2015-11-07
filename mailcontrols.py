@@ -29,6 +29,8 @@ socket.setdefaulttimeout(30)
 
 # Master object serving as a database handler to wrap up advanced behaviors
 # and configurations for use later (especially in plugins).
+# TODO: Move to another module and add ability to select different database
+# types (like SQLite)
 class DB:
     # default connection object, this should be overwritten almost right away.
     conn = None
