@@ -180,6 +180,9 @@ while True:
     # At the start of each run check for new emails before entering idle cycle.
     # This is in case new emails arrive while the previous set are being
     # processed.
+    # debug line added to isolate server hangs
+    loghandler('SERVER', logqueue=logthread.queue).output(
+            "Searching for emails.", 10)
     messages = server.search()
 
     # A very simple check, past_emails will always contain the previous list
@@ -213,6 +216,9 @@ while True:
             # End idle status, otherwise code will break on every request sent
             # to server.
             server.idle_done()
+
+            # Debug message trying to isolate hangs in the program at likely spots.
+            loghandler('IDLE', logqueue=logthread.queue).output("Exited IDLE.", 10)
         except:
             # something failed in idle... likely a timeout of some sort
             # reconnect and log error
@@ -235,8 +241,12 @@ while True:
     # On failure, set error to True so we know not to try parsing emails this
     # cycle.
     try:
-        loghandler('SERVER', logqueue=logthread.queue).output("Searching for new emails.", 4)
+        loghandler('SERVER', logqueue=logthread.queue).output(
+            "Searching for new emails.", 4)
         messages = server.search()
+        # Debug message trying to isolate hangs in the program at likely spots.
+        loghandler('SERVER', logqueue=logthread.queue).output(
+            "Found %i emails total." % (len(messages)), 10)
     except:
         error = True
         loghandler('SEARCH', logqueue=logthread.queue).output(
