@@ -1,13 +1,15 @@
 from sqlalchemy import Table, Column, String
+import __filter
 
-class mailfilter:
+
+class mailfilter(__filter.mailfilter):
     def __init__(self,handle, log, dbsession, dbmeta, **options):
         self.loghandler = log
 
         self.dbsession = dbsession
         self.dbmeta = dbmeta
 
-        self.known_domains = Table('known_domains', self.dbmeta, Column('domain', String, primary_key=True, index=True))
+        self.known_domains = Table('known_domains', self.dbmeta, Column('domain', String(255), primary_key=True, index=True))
 
     def filter(self, handler, id, header):
         if '@' in header['From']:

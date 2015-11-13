@@ -119,6 +119,9 @@ with open('plugins.txt', 'r') as pluginindex:
                 "Error initializing plugin %s.\n%s" %
                 (line.strip(), traceback.format_exc()), 0)
 
+for filter in filters:
+    filter.prepare(server)
+
 # Just friendly info confirming the number of plugins
 print("%d Plugins Loaded." % (len(plugins)))
 
@@ -175,6 +178,10 @@ while True:
 
             # Debug message trying to isolate hangs in the program at likely spots.
             loghandler('IDLE', logqueue=logthread.queue).output("Exited IDLE.", 10)
+        except KeyboardInterrupt:
+            print("Received Keyboard Interrupt. Exiting.")
+            break
+
         except:
             # something failed in idle... likely a timeout of some sort
             # reconnect and log error
