@@ -1,7 +1,7 @@
 from sqlalchemy import Table, Column, Integer, String, Boolean, Index
-import json
+import __filter
 
-class mailfilter:
+class mailfilter(__filter.mailfilter):
     def __init__(self,handle, log, dbsession, dbmeta, **options):
         self.loghandler = log
 
