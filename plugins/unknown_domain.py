@@ -28,16 +28,6 @@ class mailfilter:
                     unknown = False
                     break
 
-                #if self.db is None:
-                #    if testdomain in self.known_domains:
-                #        unknown = False
-                #        break
-                #else:
-                #    if self.db.query('''select * from known_domains where domain='%s' ''' % (testdomain))[0] > 0:
-                #        unknown = False
-                #        break
-
-
             if unknown:
                 flags = handler.get_flags(id)[id]
                 handler.copy(id,'Unknown Domain')

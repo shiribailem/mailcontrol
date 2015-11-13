@@ -7,23 +7,20 @@
 #     ini at some later time for "user-friendliness"
 # traceback to catch errors and give the option to add more info in debug
 #     output
-# MySQLdb for database connections (of course), will likely later move it to
-#     another module when I add a more complex system for database handling
 # Socket just to change some socket defaults
 # SQLAlchemy is being used to allow the system to be database agnostic
 import sqlalchemy
 import sqlalchemy.orm
-
 from imapclient import IMAPClient
 from email.parser import HeaderParser
 import json
 import traceback
-import MySQLdb
 import socket
+
 # loghandler object contains background thread and object to handle logging
 #     without plugins having to understand or support logging configuration
 from mailcontrol.loghandler import logworker, loghandler
-import mailcontrol.database
+
 
 # Set a default timeout because some of these server connections can hang.
 socket.setdefaulttimeout(30)
@@ -49,7 +46,6 @@ with open('config.json', 'r') as configfile:
 # times.
 hparser = HeaderParser()
 
-
 # Establish and connect to SQLAlchemy Database
 dbengine = sqlalchemy.create_engine(
     "%s://%s:%s@%s:%s/%s" % (config['database']['type'],
@@ -65,16 +61,6 @@ dbmeta.bind = dbengine
 dbsessionmaker.bind = dbengine
 
 dbengine.connect()
-
-# TODO: CLEAN OUT
-# create instance of the DB object that will be used for all database calls
-# going forward
-# immediately connect to database (if this fails, we really don't want to
-# move any further
-#dbhandle = mailcontrol.database.mysqlhandle(config['database']['host'], config['database']['user'], config['database']['password'],
-#              config['database']['database'])
-#dbhandle.connect()
-# ENDTODO
 
 # basic status info so we know it started
 # TODO: add functionality to silence non-debug communications
