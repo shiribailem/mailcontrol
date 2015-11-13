@@ -10,6 +10,10 @@
 # MySQLdb for database connections (of course), will likely later move it to
 #     another module when I add a more complex system for database handling
 # Socket just to change some socket defaults
+# SQLAlchemy is being used to allow the system to be database agnostic
+import sqlalchemy
+import sqlalchemy.orm
+
 from imapclient import IMAPClient
 from email.parser import HeaderParser
 import json
@@ -19,67 +23,10 @@ import socket
 # loghandler object contains background thread and object to handle logging
 #     without plugins having to understand or support logging configuration
 from mailcontrol.loghandler import logworker, loghandler
+import mailcontrol.database
 
 # Set a default timeout because some of these server connections can hang.
 socket.setdefaulttimeout(30)
-
-
-# Master object serving as a database handler to wrap up advanced behaviors
-# and configurations for use later (especially in plugins).
-# TODO: Move to another module and add ability to select different database
-# types (like SQLite)
-class DB:
-    # default connection object, this should be overwritten almost right away.
-    conn = None
-
-    # put config data into object on init, if you can't guess what these
-    # options are, then you probably shouldn't be using databases.
-    def __init__(self, host, user, password, database):
-        self.host = host
-        self.user = user
-        self.password = password
-        self.database = database
-
-    # simple routine to connect to database and make sure database post-connect
-    # settings are set.
-    def connect(self):
-        # connect to database
-        self.conn = MySQLdb.connect(
-            self.host, self.user, self.password, self.database)
-        # set autocommit as none of the plugins should be writing to the
-        # database by default, but other things may be writing to the
-        # database elsewhere and we want to read them.
-        self.conn.autocommit(True)
-
-    # wrapper for sql queries, returns number of results and cursor
-    # object.
-    # dictionary true makes the returned cursor object a dictcursor
-    def query(self, sql, dictionary=False):
-
-        # Allow selecting dictionary cursor by setting dictionary to True
-        if dictionary:
-            cursortype = MySQLdb.cursors.DictCursor
-        else:
-            cursortype = MySQLdb.cursors.Cursor
-
-        # First try to get a cursor and perform the query immediately
-        try:
-            cursor = self.conn.cursor(cursortype)
-            resultcount = cursor.execute(sql)
-        # on failure, connection likely timed out (because we're not
-        # closing them anywhere), reconnect and try again.
-        # a second failure is definitely a failure and should be
-        # allowed to fail.
-        except (AttributeError, MySQLdb.OperationalError):
-            self.connect()
-            cursor = self.conn.cursor(dictionary=dictionary, buffered=True)
-            resultcount = cursor.execute(sql)
-
-        # return the resultcount with the cursor because many queries are only
-        # going to be needing to know if there are results without having to
-        # collect them.
-        return resultcount, cursor
-
 
 # since routine disconnects are expected (due to idle connections) putting
 # the connection process into a function so it's easily repeatable.
@@ -102,13 +49,32 @@ with open('config.json', 'r') as configfile:
 # times.
 hparser = HeaderParser()
 
+
+# Establish and connect to SQLAlchemy Database
+dbengine = sqlalchemy.create_engine(
+    "%s://%s:%s@%s:%s/%s" % (config['database']['type'],
+                             config['database']['user'],
+                             config['database']['password'],
+                             config['database']['host'],
+                             config['database']['port'],
+                             config['database']['database']))
+
+dbmeta = sqlalchemy.MetaData()
+dbsessionmaker = sqlalchemy.orm.sessionmaker()
+dbmeta.bind = dbengine
+dbsessionmaker.bind = dbengine
+
+dbengine.connect()
+
+# TODO: CLEAN OUT
 # create instance of the DB object that will be used for all database calls
 # going forward
 # immediately connect to database (if this fails, we really don't want to
 # move any further
-dbhandle = DB(config['database']['host'], config['database']['user'], config['database']['password'],
-              config['database']['database'])
-dbhandle.connect()
+#dbhandle = mailcontrol.database.mysqlhandle(config['database']['host'], config['database']['user'], config['database']['password'],
+#              config['database']['database'])
+#dbhandle.connect()
+# ENDTODO
 
 # basic status info so we know it started
 # TODO: add functionality to silence non-debug communications
@@ -154,7 +120,7 @@ with open('plugins.txt', 'r') as pluginindex:
             plugins.append(tempmod)
             # Create instance of mailfilter that's present in each plugin
             # and put it sequentially in the filters list
-            filters.append(tempmod.mailfilter(server, loghandler(line.strip(), logqueue=logthread.queue), db=dbhandle))
+            filters.append(tempmod.mailfilter(server, loghandler(line.strip(), logqueue=logthread.queue), dbsession=dbsessionmaker(), dbmeta=dbmeta))
         except:
             # If there's a problem with an individual plugin, we want to catch
             # the error and provide output. Debug level 0 as we want to know
@@ -169,6 +135,10 @@ with open('plugins.txt', 'r') as pluginindex:
 
 # Just friendly info confirming the number of plugins
 print("%d Plugins Loaded." % (len(plugins)))
+
+# Create all tables defined in plugins
+dbmeta.create_all()
+print("Loaded all database tables.")
 
 # this is just to let the user know we're up and running at this point.
 print("Beginning primary program loop.")

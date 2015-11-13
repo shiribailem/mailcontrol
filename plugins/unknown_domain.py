@@ -1,23 +1,13 @@
-from datetime import datetime, timedelta
+from sqlalchemy import Table, Column, String
 
 class mailfilter:
-    def __init__(self,handle, log, **options):
+    def __init__(self,handle, log, dbsession, dbmeta, **options):
         self.loghandler = log
 
-        self.known_domains = []
+        self.dbsession = dbsession
+        self.dbmeta = dbmeta
 
-        if 'db' in options.keys():
-            self.db = options['db']
-        else:
-            with open('config/unknown_domain.txt','r') as file:
-                for line in file.readlines():
-                    self.known_domains.append(line.strip())
-
-            if not handle.folder_exists('Unknown Domain'):
-                handle.create_folder('Unknown Domain')
-
-            self.db = None
-
+        self.known_domains = Table('known_domains', self.dbmeta, Column('domain', String, primary_key=True, index=True))
 
     def filter(self, handler, id, header):
         if '@' in header['From']:
@@ -31,14 +21,21 @@ class mailfilter:
             for i in range(-(len(domainparts)),0):
                 testdomain = '.'.join(domainparts[i:len(domainparts)])
                 self.loghandler.output("Testing %s" %(testdomain),10)
-                if self.db is None:
-                    if testdomain in self.known_domains:
-                        unknown = False
-                        break
-                else:
-                    if self.db.query('''select * from known_domains where domain='%s' ''' % (testdomain))[0] > 0:
-                        unknown = False
-                        break
+
+                if self.dbsession.query(self.known_domains).filter(
+                                self.known_domains.c.domain == testdomain
+                                ).count() > 0:
+                    unknown = False
+                    break
+
+                #if self.db is None:
+                #    if testdomain in self.known_domains:
+                #        unknown = False
+                #        break
+                #else:
+                #    if self.db.query('''select * from known_domains where domain='%s' ''' % (testdomain))[0] > 0:
+                #        unknown = False
+                #        break
 
 
             if unknown:
