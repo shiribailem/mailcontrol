@@ -103,7 +103,7 @@ with open('plugins.txt', 'r') as pluginindex:
             # and put it sequentially in the filters list
             filters.append(tempmod.mailfilter(
                 server, loghandler(line.strip(), logqueue=logthread.queue),
-                dbsession=dbsessionmaker(), dbmeta=dbmeta))
+                dbsession=dbsessionmaker(), dbmeta=dbmeta, config=config))
         except:
             # If there's a problem with an individual plugin, we want to catch
             # the error and provide output. Debug level 0 as we want to know
