@@ -37,8 +37,13 @@ def server_login(config):
 
     return server
 
-# Load Configuration from INI file
+# Create config objects
 config = ConfigParser.RawConfigParser()
+
+# Load defaults first so all necessary options are guaranteed
+config.read('mailcontrol/defaults.ini')
+
+# Load user config second to override defaults
 config.read('config.ini')
 
 # create an instance of the header parser, only need one and will re-use it
