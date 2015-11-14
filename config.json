@@ -5,12 +5,5 @@
   "SSL": true,
   "debug": 10,
   "idle_timeout": 60,
-  "database": {
-    "type": "mysql",
-    "host": "server",
-    "port": "3306",
-    "user": "user",
-    "password": "password",
-    "database": "database"
-  }
+  "database": "mysql://user:password@server:port/database"
 }

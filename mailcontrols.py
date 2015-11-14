@@ -47,13 +47,7 @@ with open('config.json', 'r') as configfile:
 hparser = HeaderParser()
 
 # Establish and connect to SQLAlchemy Database
-dbengine = sqlalchemy.create_engine(
-    "%s://%s:%s@%s:%s/%s" % (config['database']['type'],
-                             config['database']['user'],
-                             config['database']['password'],
-                             config['database']['host'],
-                             config['database']['port'],
-                             config['database']['database']),
+dbengine = sqlalchemy.create_engine(config["database"],
                             pool_recycle=3600)
 
 dbmeta = sqlalchemy.MetaData()
