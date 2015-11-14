@@ -34,7 +34,7 @@ options:
 
 """
 
-from sqlalchemy import Table, Column, Integer, String, Boolean, Index, or_
+from sqlalchemy import Table, Column, Integer, String, Boolean, Index
 import __filter
 import re
 
@@ -95,7 +95,10 @@ class mailfilter(__filter.mailfilter):
             testdomain = '.'.join(domainparts[i:len(domainparts)])
             self.loghandler.output("Testing %s" % testdomain, 10)
 
-            results.extend(basequery.filter_by(domain=testdomain).all())
+            results.extend(basequery.filter_by(
+                domain=testdomain,
+                username=None
+            ).all())
 
         result = self.__check_rules(header, results)
 

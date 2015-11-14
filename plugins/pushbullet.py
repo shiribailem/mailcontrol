@@ -82,7 +82,10 @@ class mailfilter(__filter.mailfilter):
             testdomain = '.'.join(domainparts[i:len(domainparts)])
             self.loghandler.output("Testing %s" % testdomain, 10)
 
-            results.extend(basequery.filter_by(domain=testdomain).all())
+            results.extend(basequery.filter_by(
+                domain=testdomain,
+                username=None
+            ).all())
 
         result = self.__check_rules(header, results)
 
