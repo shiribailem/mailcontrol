@@ -6,7 +6,7 @@
   "debug": 10,
   "idle_timeout": 60,
   "database": {
-    "type": "mysql+mysqlconnector",
+    "type": "mysql",
     "host": "server",
     "port": "3306",
     "user": "user",
