@@ -107,7 +107,9 @@ with open('plugins.txt', 'r') as pluginindex:
             plugins.append(tempmod)
             # Create instance of mailfilter that's present in each plugin
             # and put it sequentially in the filters list
-            filters.append(tempmod.mailfilter(server, loghandler(line.strip(), logqueue=logthread.queue), dbsession=dbsessionmaker(), dbmeta=dbmeta))
+            filters.append(tempmod.mailfilter(
+                server, loghandler(line.strip(), logqueue=logthread.queue),
+                dbsession=dbsessionmaker(), dbmeta=dbmeta))
         except:
             # If there's a problem with an individual plugin, we want to catch
             # the error and provide output. Debug level 0 as we want to know
@@ -120,15 +122,17 @@ with open('plugins.txt', 'r') as pluginindex:
                 "Error initializing plugin %s.\n%s" %
                 (line.strip(), traceback.format_exc()), 0)
 
-for filter in filters:
-    filter.prepare(server)
-
 # Just friendly info confirming the number of plugins
 print("%d Plugins Loaded." % (len(plugins)))
 
 # Create all tables defined in plugins
 dbmeta.create_all()
 print("Loaded all database tables.")
+
+# Parse every plugin's prepare module to perform any tasks that require tables
+# to already exist
+for filter in filters:
+    filter.prepare(server)
 
 # this is just to let the user know we're up and running at this point.
 print("Beginning primary program loop.")
