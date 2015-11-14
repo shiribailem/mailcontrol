@@ -1,4 +1,6 @@
 """
+Auto Filter: Basic filtering by whole address or domain
+
 References auto_filter table to automatically move emails based on the from address or domain.
 
 Emails are tested first for full match to username@domain before testing only the domain.

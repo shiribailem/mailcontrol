@@ -1,4 +1,6 @@
 """
+GMail Filter: Basic filter using GMail tags
+
 References gmail_filter table to automatically move emails based on gmail tags.
 
 Tags are specified using a gmail feature that ignores anything after and including a + in the receiving email address.

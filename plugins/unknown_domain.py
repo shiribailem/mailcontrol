@@ -1,4 +1,6 @@
 """
+Unknown Domain: Filter emails from unfamiliar domains out of inbox
+
 Unknown_domain is a very minimalist filter.
 
 The domain is extract from each email and compared against the known_domains table (only containing one field).
