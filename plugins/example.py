@@ -1,4 +1,6 @@
-class mailfilter:
+import __filter
+
+class mailfilter(__filter.mailfilter):
     def __init__(self,handle, log, **options):
         self.loghandler = log
 
