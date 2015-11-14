@@ -14,6 +14,7 @@ import sqlalchemy.orm
 from imapclient import IMAPClient
 from email.parser import HeaderParser
 import json
+import ConfigParser
 import traceback
 import socket
 
@@ -29,25 +30,23 @@ socket.setdefaulttimeout(30)
 # the connection process into a function so it's easily repeatable.
 # returns imapclient object already configured and set to 'INBOX'
 def server_login(config):
-    server = IMAPClient(config['HOST'], use_uid=True, ssl=config['SSL'])
-    server.login(config['USERNAME'], config['PASSWORD'])
+    server = IMAPClient(config.get('imap','host'), use_uid=True, ssl=config.getboolean('imap','ssl'))
+    server.login(config.get('imap','username'), config.get('imap','password'))
 
     select_info = server.select_folder('INBOX')
 
     return server
 
-
-# Load config file into config dictionary
-# TODO: change to ini for "user friendliness" and DB config compatibility
-with open('config.json', 'r') as configfile:
-    config = json.loads(configfile.read())
+# Load Configuration from INI file
+config = ConfigParser.RawConfigParser()
+config.read('config.ini')
 
 # create an instance of the header parser, only need one and will re-use it
 # times.
 hparser = HeaderParser()
 
 # Establish and connect to SQLAlchemy Database
-dbengine = sqlalchemy.create_engine(config["database"],
+dbengine = sqlalchemy.create_engine(config.get('database', 'engine'),
                             pool_recycle=3600)
 
 dbmeta = sqlalchemy.MetaData()
@@ -83,7 +82,7 @@ filters = []
 # to pass the log queue to each of the plugins
 # defaults in class (see mailcontrol.loghandler) will have output go to
 # stderr
-logthread = logworker(debug_level=config['debug'])
+logthread = logworker(debug_level=config.getint('mailcontrol','debug'))
 logthread.start()
 
 # parse through the plugins.txt file, each line is just the name of a file in
@@ -164,7 +163,7 @@ while True:
             # block on idle_check, this will block the program until either
             # activity is seen on the server, or the idle_timeout in seconds
             # passed.
-            idle_debug = server.idle_check(config['idle_timeout'])
+            idle_debug = server.idle_check(config.getfloat('imap','idle_timeout'))
 
             # More heavily verbose statements, this one just outputs whatever
             # the server sent from idle... will eventually want to actually
