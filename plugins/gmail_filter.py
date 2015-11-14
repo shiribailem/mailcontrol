@@ -1,26 +1,30 @@
-from datetime import datetime, timedelta
 import json
+from sqlalchemy import Table, Column, Integer, String, Boolean, Index
+import __filter
 
-class mailfilter:
-    def __init__(self,handle, log, **options):
+class mailfilter(__filter.mailfilter):
+    def __init__(self,handle, log, dbsession, dbmeta, **options):
         self.loghandler = log
 
-        if not handle.folder_exists('Gmail Tags'):
-            handle.create_folder('Gmail Tags')
+        self.dbsession = dbsession
+        self.dbmeta = dbmeta
 
-        if not "db" in options.keys():
-            with open('config/gmail_tags.json','r') as file:
-                self.config = json.loads(file.read())
-            self.db = None
-        else:
-            self.db = options['db']
+        self.gmail_filter = Table('gmail_filter', self.dbmeta,
+                                 Column('id', Integer, primary_key=True, autoincrement=True),
+                                 Column('tag', String(255), index=True),
+                                 Column('seen', Boolean, default=False),
+                                 Column('folder', String(255), index=True),
+                                 )
 
-            rcount, cursor = self.db.query("select folder from gmail_filter where folder is not null group by folder order by folder")
+    def prepare(self, handle):
+        if not handle.folder_exists("Gmail Tags"):
+            handle.create_folder("Gmail Tags")
 
-            results = cursor.fetchall()
-            for folder in results:
-                if not handle.folder_exists(folder[0]):
-                    handle.create_folder(folder[0])
+        results = self.dbsession.query(self.gmail_filter).distinct().values(self.gmail_filter.c.folder)
+
+        for result in results:
+            if not handle.folder_exists(result.folder):
+                handle.create_folder(result.folder)
 
     def filter(self, handler, id, header):
         addresses = header['To'].lower().split(',')
@@ -31,35 +35,13 @@ class mailfilter:
 
                 self.loghandler.output("Found tag: " + tag, 1)
 
-                found = False
+                result = self.dbsession.query(self.gmail_filter).filter_by(tag=tag).first()
 
-                if self.db is None:
-                    if tag in self.config.keys():
-                        found = True
-                        if 'read' in self.config[tag].keys() and self.config[tag]['read']:
-                            seen = True
-                        else:
-                            seen = False
-                        if 'folder' in self.config[tag].keys():
-                            folder = self.config[tag]['folder']
-                        else:
-                            folder = None
-                    else:
-                        if not handler.folder_exists("Gmail Tags." + tag):
-                            handler.create_folder("Gmail Tags." + tag)
-                        handler.copy(id, "Gmail Tags." + tag)
-
-                else:
-                    rcount, cursor = self.db.query('''select seen, folder from gmail_filter where tag='%s' ''' % (tag))
-                    if rcount > 0:
-                        seen, folder = cursor.fetchone()
-                        found = True
-
-                if found:
-                    if seen:
+                if result:
+                    if result.seen:
                         handler.set_flags(id,'\\seen')
-                    if not folder is None:
-                        handler.copy(id,folder)
+                    if not result.folder is None:
+                        handler.copy(id,result.folder)
                         handler.delete_messages(id)
                         handler.expunge()
                         return False

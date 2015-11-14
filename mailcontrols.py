@@ -53,10 +53,11 @@ dbengine = sqlalchemy.create_engine(
                              config['database']['password'],
                              config['database']['host'],
                              config['database']['port'],
-                             config['database']['database']))
+                             config['database']['database']),
+                            pool_recycle=3600)
 
 dbmeta = sqlalchemy.MetaData()
-dbsessionmaker = sqlalchemy.orm.sessionmaker()
+dbsessionmaker = sqlalchemy.orm.sessionmaker(autocommit=True)
 dbmeta.bind = dbengine
 dbsessionmaker.bind = dbengine
 
