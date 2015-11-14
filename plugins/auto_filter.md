@@ -11,6 +11,8 @@ options:
 * seen: Default False. When True the email is marked as seen (or read).
 * folder: The folder the email is moved to, with subfolders delimited by periods (.).
 
+'''
+
 
     mysql> describe auto_filter;   
     +----------+------------------+------+-----+---------+----------------+
@@ -23,3 +25,4 @@ options:
     | folder   | varchar(255)     | YES  | MUL | NULL    |                |
     +----------+------------------+------+-----+---------+----------------+
     5 rows in set (0.26 sec)
+'''
