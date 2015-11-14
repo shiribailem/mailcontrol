@@ -11,6 +11,10 @@ class mailfilter(__filter.mailfilter):
 
         self.known_domains = Table('known_domains', self.dbmeta, Column('domain', String(255), primary_key=True, index=True))
 
+    def prepare(self, handle):
+        if not handle.folder_exists("Unknown Domain"):
+                handle.create_folder("Unknown Domain")
+
     def filter(self, handler, id, header):
         if '@' in header['From']:
             domain = header['From'].split('<')[-1].split('>')[0].split('@')[-1].split(' ')[0].strip().lower()
