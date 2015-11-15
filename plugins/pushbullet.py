@@ -17,6 +17,8 @@ Requires config section:
 
 """
 
+#TODO: Add Database Table Spec to Docstring
+
 import __filter
 from sqlalchemy import Table, Column, Integer, String, Index
 import requests
