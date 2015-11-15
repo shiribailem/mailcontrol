@@ -1,4 +1,10 @@
 #!/usr/bin/python -u
+__version__ = {
+    "branch": "unstable",
+    "release": (0,1,0),
+    "date": (0, 0, 0)
+}
+
 # ^ -u added as I typically run this using supervisor and it complained about it.
 
 # IMAPClient for obvious reasons.

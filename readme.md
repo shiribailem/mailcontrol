@@ -1,3 +1,8 @@
+#Mail Control#
+__Version 0.1__
+__Unstable__
+
+
 Extremely early version of code. Beginning functionality lacking documentation.
 
 Requires sqlalchemy and imapclient. (available via pip)
@@ -20,4 +25,3 @@ sqlalchemy then creates tables in response.
 Plugins are loaded from plugins.txt by filename and filters are applied in the order listed.
 
 Plugins are configured separately, documentation for provided plugins is in plugins folder.
-
