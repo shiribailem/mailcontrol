@@ -29,8 +29,15 @@ socket.setdefaulttimeout(30)
 # since routine disconnects are expected (due to idle connections) putting
 # the connection process into a function so it's easily repeatable.
 # returns imapclient object already configured and set to 'INBOX'
+# TODO: wait for imapclient to update stable package to include timeout
+#  argument. Currently present in dev stream.
+#  See just about idle_done call for temporary fix.
 def server_login(config):
-    server = IMAPClient(config.get('imap','host'), use_uid=True, ssl=config.getboolean('imap','ssl'))
+    server = IMAPClient(
+        config.get('imap','host'),
+        use_uid=True,
+        ssl=config.getboolean('imap','ssl')
+    )
     server.login(config.get('imap','username'), config.get('imap','password'))
 
     select_info = server.select_folder('INBOX')
@@ -174,6 +181,17 @@ while True:
             # the server sent from idle... will eventually want to actually
             # parse and understand these statements for better efficiency
             loghandler('IDLE', logqueue=logthread.queue).output(idle_debug, 8)
+
+            # WORKAROUND: Current version of imapclient sets blocking without
+            # timeout as it exits idle_check. Dev version already implements
+            # fix, this is a temporary fix.
+            # Reset socket timeout to 30 seconds.
+            # IMAPClient.idle_check function clears socket timeout and sets
+            # connection to blocking without timeout upon finishing.
+            # Without this, a connection failure can cause the program to hang
+            # on any further server operations.
+            sock = getattr(server._imap, 'sslobj', server._imap.sock)
+            sock.settimeout(30)
 
             # End idle status, otherwise code will break on every request sent
             # to server.
