@@ -49,9 +49,9 @@ class mailfilter(__filter.mailfilter):
     def filter(self, handler, id, header):
         addresses = header['To'].lower().split(',')
         if header['Cc']:
-            addresses.append(header['Cc'].lower().split(','))
+            addresses.extend(header['Cc'].lower().split(','))
         if header['Bcc']:
-            addresses.append(header['Bcc'].lower().split(','))
+            addresses.extend(header['Bcc'].lower().split(','))
 
 
         blind_check = True
@@ -82,17 +82,18 @@ class mailfilter(__filter.mailfilter):
                 handler.copy(id, 'Mailing Lists')
             else:
                 for rule in rules:
-                    self.loghandler.output(
-                        "Rule for %s processing. Seen:%i, Folder:%s" % (
-                            rule.mailer, rule.seen, rule.folder)
-                        , 5)
-                    if result.seen:
-                        handler.set_flags(id, '\\seen')
-                    if not result.folder is None:
-                        handler.copy(id, result.folder)
-                    else:
-                        self.loghandler.output("No folder specified to filter into Mailing Lists.", 10)
-                        handler.copy(id, "Mailing Lists")
+                    if rule:
+                        self.loghandler.output(
+                            "Rule for %s processing. Seen:%i, Folder:%s" % (
+                                rule.mailer, rule.seen, rule.folder)
+                            , 5)
+                        if rule.seen:
+                            handler.set_flags(id, '\\seen')
+                        if not rule.folder is None:
+                            handler.copy(id, rule.folder)
+                        else:
+                            self.loghandler.output("No folder specified to filter into Mailing Lists.", 10)
+                            handler.copy(id, "Mailing Lists")
 
             handler.delete_messages(id)
             handler.expunge()
