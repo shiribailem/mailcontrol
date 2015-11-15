@@ -272,34 +272,41 @@ while True:
 
             # If it's in past_emails, then we've seen it before, ignore.
             if msgid not in past_emails:
-                # If we're here, it's a new email, grab the headers so we can
-                # pass those to the filters.
-                message = server.fetch(msgid, ['BODY[HEADER]'])
-                # fetching sets the email to seen, remove that flag because
-                # we haven't actually looked at it yet.
-                # TODO: get flags before hand so that we don't set an email as
-                #   unread when it was actually read before us.
-                server.remove_flags(msgid, '\\Seen')
 
-                # parse headers into a nice dictionary (thank you email.parser
-                # for making this easy!
-                header = hparser.parsestr(message[msgid]['BODY[HEADER]'])
+                try:
+                    # If we're here, it's a new email, grab the headers so we can
+                    # pass those to the filters.
+                    message = server.fetch(msgid, ['BODY[HEADER]'])
+                    # fetching sets the email to seen, remove that flag because
+                    # we haven't actually looked at it yet.
+                    # TODO: get flags before hand so that we don't set an email as
+                    #   unread when it was actually read before us.
+                    server.remove_flags(msgid, '\\Seen')
 
-                for mailfilter in filters:
-                    try:
-                        # Run filter function of each plugin.
-                        # If the function returns False, this means to stop
-                        # running filters on this email.
-                        if not mailfilter.filter(server, msgid, header):
-                            break
-                    except:
-                        # If an error is caught in the filter, log it here.
-                        # TODO: add info to plugins (see above when adding
-                        # them) so this can provide things like the plugin name
-                        # and error statistics.
-                        loghandler('PLUGINS', logqueue=logthread.queue).output(
-                            "Error Executing plugin.\n"
-                            + traceback.format_exc(), 1)
+                    # parse headers into a nice dictionary (thank you email.parser
+                    # for making this easy!
+                    header = hparser.parsestr(message[msgid]['BODY[HEADER]'])
+
+                    for mailfilter in filters:
+                        try:
+                            # Run filter function of each plugin.
+                            # If the function returns False, this means to stop
+                            # running filters on this email.
+                            if not mailfilter.filter(server, msgid, header):
+                                break
+                        except:
+                            # If an error is caught in the filter, log it here.
+                            # TODO: add info to plugins (see above when adding
+                            # them) so this can provide things like the plugin name
+                            # and error statistics.
+                            loghandler('PLUGINS', logqueue=logthread.queue).output(
+                                "Error Executing plugin.\n"
+                                + traceback.format_exc(), 1)
+                except:
+                    loghandler('SERVER', logqueue=logthread.queue).output(
+                        "Error with message id %i" % msgid,
+                        10
+                    )
 
         # When done, add list of ids to past_emails list so we know these have
         # all been handled.

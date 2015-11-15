@@ -82,18 +82,17 @@ class mailfilter(__filter.mailfilter):
                 handler.copy(id, 'Mailing Lists')
             else:
                 for rule in rules:
-                    if rule:
-                        self.loghandler.output(
-                            "Rule for %s processing. Seen:%i, Folder:%s" % (
-                                rule.mailer, rule.seen, rule.folder)
-                            , 5)
-                        if rule.seen:
-                            handler.set_flags(id, '\\seen')
-                        if not rule.folder is None:
-                            handler.copy(id, rule.folder)
-                        else:
-                            self.loghandler.output("No folder specified to filter into Mailing Lists.", 10)
-                            handler.copy(id, "Mailing Lists")
+                    self.loghandler.output(
+                        "Rule for %s processing. Seen:%i, Folder:%s" % (
+                            rule.mailer, rule.seen, rule.folder)
+                        , 5)
+                    if rule.seen:
+                        handler.set_flags(id, '\\seen')
+                    if not rule.folder is None:
+                        handler.copy(id, rule.folder)
+                    else:
+                        self.loghandler.output("No folder specified to filter into Mailing Lists.", 10)
+                        handler.copy(id, "Mailing Lists")
 
             handler.delete_messages(id)
             handler.expunge()
