@@ -59,6 +59,11 @@ config.read('mailcontrol/defaults.ini')
 # Load user config second to override defaults
 config.read('config.ini')
 
+# Break out 'addresses' value into a list.
+config.set('mailcontrol', 'addresses'
+           ,config.get('mailcontrol','addresses'
+            ).split(','))
+
 # create an instance of the header parser, only need one and will re-use it
 # times.
 hparser = HeaderParser()
