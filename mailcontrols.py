@@ -68,7 +68,7 @@ dbengine = sqlalchemy.create_engine(config.get('database', 'engine'),
                             pool_recycle=3600)
 
 dbmeta = sqlalchemy.MetaData()
-dbsessionmaker = sqlalchemy.orm.sessionmaker(autocommit=True)
+dbsessionmaker = sqlalchemy.orm.sessionmaker(autoflush=True)
 dbmeta.bind = dbengine
 dbsessionmaker.bind = dbengine
 
@@ -83,13 +83,8 @@ server = server_login(config)
 
 print("Connected to Server.")
 
-# Collect email ids already in INBOX, these will be used to check which emails
-# are new in the future (if it's not in the list, then it wasn't there last
-# time we looked.
-past_emails = server.search()
-
 # Basic debug info to identify how many emails were seen on first program run
-print("Ignoring emails received prior to program start, %d ignored." % (len(past_emails)))
+#print("Ignoring emails received prior to program start, %d ignored." % (len(past_emails)))
 
 # empty lists to hold the plugin modules as we parse through them.
 # TODO: Add more complexity to store statistics and more elegant handling
@@ -136,9 +131,21 @@ with open('plugins.txt', 'r') as pluginindex:
 # Just friendly info confirming the number of plugins
 print("%d Plugins Loaded." % (len(plugins)))
 
+# Create table to hold persistent mail list between runs.
+db_inbox_list = sqlalchemy.Table('inbox_list', dbmeta, sqlalchemy.Column('id', sqlalchemy.Integer))
+dbsession = dbsessionmaker()
+
 # Create all tables defined in plugins
 dbmeta.create_all()
 print("Loaded all database tables.")
+
+# Commit in case any new tables were formed.
+dbsession.commit()
+
+# Collect archived email list from server before continuing.
+past_emails = []
+for entry in dbsession.query(db_inbox_list).all():
+    past_emails.append(entry.id)
 
 # Parse every plugin's prepare module to perform any tasks that require tables
 # to already exist
@@ -250,8 +257,14 @@ while True:
             break
 
     if not error:
+        # Remove all old ids from the persistence database.
+        # They will be re-added during the cycle as each new id is processed.
+        db_inbox_list.delete().execute()
+
         # Cycle through each msgid to check for new and to pass to filters
         for msgid in messages:
+            db_inbox_list.insert().values(id=msgid).execute()
+
             # If it's in past_emails, then we've seen it before, ignore.
             if msgid not in past_emails:
                 # If we're here, it's a new email, grab the headers so we can
@@ -286,3 +299,6 @@ while True:
         # When done, add list of ids to past_emails list so we know these have
         # all been handled.
         past_emails = messages
+
+        # Commit changes to the database.
+        dbsession.commit()
