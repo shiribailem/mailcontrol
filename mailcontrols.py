@@ -79,6 +79,10 @@ dbsessionmaker.bind = dbengine
 
 dbengine.connect()
 
+# Create table to hold persistent mail list between runs.
+db_inbox_list = sqlalchemy.Table('inbox_list', dbmeta, sqlalchemy.Column('id', sqlalchemy.Integer))
+dbsession = dbsessionmaker()
+
 # basic status info so we know it started
 # TODO: add functionality to silence non-debug communications
 print("Established Database Connection.")
@@ -120,7 +124,7 @@ with open('plugins.txt', 'r') as pluginindex:
             # and put it sequentially in the filters list
             filters.append(tempmod.mailfilter(
                 server, loghandler(line.strip(), logqueue=logthread.queue),
-                dbsession=dbsessionmaker(), dbmeta=dbmeta, config=config))
+                dbsession=dbsession, dbmeta=dbmeta, config=config))
         except:
             # If there's a problem with an individual plugin, we want to catch
             # the error and provide output. Debug level 0 as we want to know
@@ -135,10 +139,6 @@ with open('plugins.txt', 'r') as pluginindex:
 
 # Just friendly info confirming the number of plugins
 print("%d Plugins Loaded." % (len(plugins)))
-
-# Create table to hold persistent mail list between runs.
-db_inbox_list = sqlalchemy.Table('inbox_list', dbmeta, sqlalchemy.Column('id', sqlalchemy.Integer))
-dbsession = dbsessionmaker()
 
 # Create all tables defined in plugins
 dbmeta.create_all()
