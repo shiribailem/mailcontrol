@@ -9,24 +9,45 @@ __version__ = {
 
 # IMAPClient for obvious reasons.
 # email.parser for breaking out email headers into dict objects
-# json because I like using that for config files, might change it out for
-#     ini at some later time for "user-friendliness"
 # traceback to catch errors and give the option to add more info in debug
 #     output
 # Socket just to change some socket defaults
 # SQLAlchemy is being used to allow the system to be database agnostic
+# ConfigParser to process the config files (ini format)
+# argparse to handle command line arguments
 import sqlalchemy
 import sqlalchemy.orm
 from imapclient import IMAPClient
 from email.parser import HeaderParser
-import json
 import ConfigParser
 import traceback
 import socket
+import argparse
 
 # loghandler object contains background thread and object to handle logging
 #     without plugins having to understand or support logging configuration
 from mailcontrol.loghandler import logworker, loghandler
+
+# Establish argument parser and process before doing anything else
+
+arguments = argparse.ArgumentParser(
+    description="Manage emails over IMAP via plugins.")
+arguments.add_argument('-1', '--once',
+                       help="Do not enter idle, exit after one run.",
+                       action="store_true")
+arguments.add_argument('--skip',
+                       help="Skip loading plugin given, can be given "
+                            "multiple times.",
+                       action="append")
+
+args = arguments.parse_args()
+
+# If given, parse skip arguments to generate a blacklisted list of plugins.
+
+if args.skip:
+    plugin_blacklist = args.skip
+else:
+    plugin_blacklist = []
 
 
 # Set a default timeout because some of these server connections can hang.
@@ -113,29 +134,32 @@ logthread.start()
 # and filters can (intentionally) make the system skip all filters after it
 with open('plugins.txt', 'r') as pluginindex:
     for line in pluginindex.readlines():
-        try:
-            # use __import__ to simply load each plugin as a module, adding it
-            # to the plugins list.
-            # list isn't technically necessary, but I greatly dislike the idea
-            # of loading modules this way without keeping handles
-            tempmod = __import__('plugins.' + line.strip(), fromlist=[''])
-            plugins.append(tempmod)
-            # Create instance of mailfilter that's present in each plugin
-            # and put it sequentially in the filters list
-            filters.append(tempmod.mailfilter(
-                server, loghandler(line.strip(), logqueue=logthread.queue),
-                dbsession=dbsession, dbmeta=dbmeta, config=config))
-        except:
-            # If there's a problem with an individual plugin, we want to catch
-            # the error and provide output. Debug level 0 as we want to know
-            # this regardless.
-            # while it's not ideal, we want to be able to continue running even
-            # with a failed plugin.
-            # will give the plugin name and use traceback to include the
-            # exception
-            loghandler("PLUGINS", logthread.queue).output(
-                "Error initializing plugin %s.\n%s" %
-                (line.strip(), traceback.format_exc()), 0)
+        if not line.strip() in plugin_blacklist:
+            try:
+                # use __import__ to simply load each plugin as a module, adding it
+                # to the plugins list.
+                # list isn't technically necessary, but I greatly dislike the idea
+                # of loading modules this way without keeping handles
+                tempmod = __import__('plugins.' + line.strip(), fromlist=[''])
+                plugins.append(tempmod)
+                # Create instance of mailfilter that's present in each plugin
+                # and put it sequentially in the filters list
+                filters.append(tempmod.mailfilter(
+                    server, loghandler(line.strip(), logqueue=logthread.queue),
+                    dbsession=dbsession, dbmeta=dbmeta, config=config))
+            except:
+                # If there's a problem with an individual plugin, we want to catch
+                # the error and provide output. Debug level 0 as we want to know
+                # this regardless.
+                # while it's not ideal, we want to be able to continue running even
+                # with a failed plugin.
+                # will give the plugin name and use traceback to include the
+                # exception
+                loghandler("PLUGINS", logthread.queue).output(
+                    "Error initializing plugin %s.\n%s" %
+                    (line.strip(), traceback.format_exc()), 0)
+        else:
+            print("%s blocked with --skip flag." % line.strip())
 
 # Just friendly info confirming the number of plugins
 print("%d Plugins Loaded." % (len(plugins)))
@@ -175,7 +199,7 @@ while True:
     # A very simple check, past_emails will always contain the previous list
     # of ids seen. If these don't match, there's new emails since we last
     # looked and we should skip this whole section to process them right away.
-    if messages == past_emails:
+    if messages == past_emails and not args.once:
         # Wrap in try/except because so many of these lines can fail for
         # various connection errors and timeouts.
         # attempt to reconnect if a failure is encountered.
@@ -314,3 +338,7 @@ while True:
 
         # Commit changes to the database.
         dbsession.commit()
+
+        if args.once:
+            print("Completed run, exiting loop due to --once")
+            break
