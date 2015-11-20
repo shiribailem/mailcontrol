@@ -103,7 +103,7 @@ class mailfilter(__filter.mailfilter):
                  'title': title, 'type': 'note'}),
                           headers={'Access-Token': self.access_token,
                                    'Content-Type': 'application/json'})
-            self.loghandler("Pushed: %s: %s: %s (%s)" % (
+            self.loghandler.output("Pushed: %s: %s: %s (%s)" % (
                 title, header["From"], header["Subject"],
                 datetime.now().time().isoformat()
             ), 10)
