@@ -118,7 +118,7 @@ print("Connected to Server.")
 
 # empty lists to hold the plugin modules as we parse through them.
 # TODO: Add more complexity to store statistics and more elegant handling
-plugins = []
+pluginindex = {}
 filters = []
 
 # Start up the log thread and get the object as we'll need it at this point
@@ -132,21 +132,24 @@ logthread.start()
 # the plugins folder
 # order matters as the filters in each plugin will be run from top to bottom
 # and filters can (intentionally) make the system skip all filters after it
-with open('plugins.txt', 'r') as pluginindex:
-    for line in pluginindex.readlines():
+with open('plugins.txt', 'r') as pluginindexfile:
+    for line in pluginindexfile.readlines():
         if not line.strip() in plugin_blacklist:
             try:
-                # use __import__ to simply load each plugin as a module, adding it
-                # to the plugins list.
-                # list isn't technically necessary, but I greatly dislike the idea
-                # of loading modules this way without keeping handles
-                tempmod = __import__('plugins.' + line.strip(), fromlist=[''])
-                plugins.append(tempmod)
-                # Create instance of mailfilter that's present in each plugin
-                # and put it sequentially in the filters list
-                filters.append(tempmod.mailfilter(
+                # Going to use this a lot, clean it up now to save time.
+                pluginname = line.strip()
+
+                # use __import__ to load each plugin to the pluginindex dictionary
+                pluginindex[pluginname] = {'module': __import__('plugins.' + pluginname, fromlist=[''])}
+
+                # Create instance of mailfilter class present in each plugin.
+                # store in "filter" object alongside the module handle
+                pluginindex[pluginname]['filter'] = pluginindex[pluginname]['module'].mailfilter(
                     server, loghandler(line.strip(), logqueue=logthread.queue),
-                    dbsession=dbsession, dbmeta=dbmeta, config=config))
+                    dbsession=dbsession, dbmeta=dbmeta, config=config)
+
+                # Filters list serves for tracking the order of filters run.
+                filters.append(pluginname)
             except:
                 # If there's a problem with an individual plugin, we want to catch
                 # the error and provide output. Debug level 0 as we want to know
@@ -162,7 +165,7 @@ with open('plugins.txt', 'r') as pluginindex:
             print("%s blocked with --skip flag." % line.strip())
 
 # Just friendly info confirming the number of plugins
-print("%d Plugins Loaded." % (len(plugins)))
+print("%d Plugins Loaded." % (len(filters)))
 
 # Create all tables defined in plugins
 dbmeta.create_all()
@@ -179,7 +182,7 @@ for entry in dbsession.query(db_inbox_list).all():
 # Parse every plugin's prepare module to perform any tasks that require tables
 # to already exist
 for filter in filters:
-    filter.prepare(server)
+    pluginindex[filter]['filter'].prepare(server)
 
 # this is just to let the user know we're up and running at this point.
 print("Beginning primary program loop.")
@@ -316,7 +319,7 @@ while True:
                             # Run filter function of each plugin.
                             # If the function returns False, this means to stop
                             # running filters on this email.
-                            if not mailfilter.filter(server, msgid, header):
+                            if not pluginname[mailfilter]['filter'].filter(server, msgid, header):
                                 break
                         except:
                             # If an error is caught in the filter, log it here.
