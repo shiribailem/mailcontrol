@@ -99,7 +99,8 @@ class mailfilter(__filter.mailfilter):
                 title = "New Email"
 
             requests.post('https://api.pushbullet.com/v2/pushes', data=json.dumps(
-                {'body': header["From"] + ": " + header['Subject'],
+                {'body': header["From"] + ": " + header['Subject']
+                         + " (" + datetime.now().time().isoformat() + ")",
                  'title': title, 'type': 'note'}),
                           headers={'Access-Token': self.access_token,
                                    'Content-Type': 'application/json'})
