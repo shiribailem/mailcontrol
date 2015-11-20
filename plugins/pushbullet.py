@@ -21,6 +21,7 @@ Requires config section:
 
 import __filter
 from sqlalchemy import Table, Column, Integer, String, Index
+from datetime import datetime
 import requests
 import re
 import json
@@ -102,8 +103,9 @@ class mailfilter(__filter.mailfilter):
                  'title': title, 'type': 'note'}),
                           headers={'Access-Token': self.access_token,
                                    'Content-Type': 'application/json'})
-            self.loghandler("Pushed: %s: %s: %s" % (
-                title, header["From"], header["Subject"]
+            self.loghandler("Pushed: %s: %s: %s (%s)" % (
+                title, header["From"], header["Subject"],
+                datetime.now().time().isoformat()
             ), 10)
 
         self.loghandler.output(
