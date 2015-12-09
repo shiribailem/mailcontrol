@@ -34,6 +34,7 @@ class mailfilter(__filter.mailfilter):
                                  Column('mailer', String(255), index=True),
                                  Column('seen', Boolean, default=False),
                                  Column('folder', String(255), index=True),
+                                 Column('priority', Integer, default=0)
                                  )
 
     def prepare(self, handle):
@@ -71,7 +72,7 @@ class mailfilter(__filter.mailfilter):
             rules = []
 
             for address in clean_addresses:
-                result = self.dbsession.query(self.mailer_filter).filter_by(mailer=address).first()
+                result = self.dbsession.query(self.mailer_filter).filter_by(mailer=address).order_by(self.mailer_filter.c.priority.desc()).first()
                 if result:
                     rules.append(result)
 

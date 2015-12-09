@@ -1,4 +1,9 @@
 __1.1 Unstable__
+__2015-12-09__
+
+* Added priority field to mailinglists plugin (later intending to add to other filters as well)
+
+__1.1 Unstable__
 __2015-11-20__
 
 * Added timestamp to Pushbullet (to clearly identify notifications as different)
