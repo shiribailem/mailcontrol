@@ -69,34 +69,28 @@ class mailfilter(__filter.mailfilter):
         self.loghandler.output("Received addresses: " + ', '.join(clean_addresses), 10)
 
         if blind_check:
-            rules = self.dbsession.query(self.mailer_filter
+            rule = self.dbsession.query(self.mailer_filter
                                          ).filter(
                                             self.mailer_filter.c.priority.in_(clean_addresses)
                                          ).order_by(
                                             self.mailer_filter.c.priority.desc()
                                          ).first()
 
-            if rules is None:
-                rules = []
-
-            self.loghandler.output("Found %i rules matching addresses." % len(rules), 9)
-
-            if len(rules) == 0:
+            if rule is None:
                 self.loghandler.output("Defaulting to filter into Mailing Lists.", 5)
                 handler.copy(id, 'Mailing Lists')
             else:
-                for rule in rules:
-                    self.loghandler.output(
-                        "Rule for %s processing. Seen:%i, Folder:%s" % (
-                            rule.mailer, rule.seen, rule.folder)
-                        , 5)
-                    if rule.seen:
-                        handler.set_flags(id, '\\seen')
-                    if not rule.folder is None:
-                        handler.copy(id, rule.folder)
-                    else:
-                        self.loghandler.output("No folder specified to filter into Mailing Lists.", 10)
-                        handler.copy(id, "Mailing Lists")
+                self.loghandler.output(
+                    "Rule for %s processing. Seen:%i, Folder:%s" % (
+                        rule.mailer, rule.seen, rule.folder)
+                    , 5)
+                if rule.seen:
+                    handler.set_flags(id, '\\seen')
+                if not rule.folder is None:
+                    handler.copy(id, rule.folder)
+                else:
+                    self.loghandler.output("No folder specified to filter into Mailing Lists.", 10)
+                    handler.copy(id, "Mailing Lists")
 
             handler.delete_messages(id)
             handler.expunge()
