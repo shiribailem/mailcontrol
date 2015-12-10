@@ -69,12 +69,15 @@ class mailfilter(__filter.mailfilter):
         self.loghandler.output("Received addresses: " + ', '.join(clean_addresses), 10)
 
         if blind_check:
-            rules = []
+            rules = self.dbsession.query(self.mailer_filter
+                                         ).filter(
+                                            self.mailer_filter.c.priority.in_(clean_addresses)
+                                         ).order_by(
+                                            self.mailer_filter.c.priority.desc()
+                                         ).first()
 
-            for address in clean_addresses:
-                result = self.dbsession.query(self.mailer_filter).filter_by(mailer=address).order_by(self.mailer_filter.c.priority.desc()).first()
-                if result:
-                    rules.append(result)
+            if rules is None:
+                rules = []
 
             self.loghandler.output("Found %i rules matching addresses." % len(rules), 9)
 
