@@ -71,7 +71,7 @@ class mailfilter(__filter.mailfilter):
         if blind_check:
             rule = self.dbsession.query(self.mailer_filter
                                          ).filter(
-                                            self.mailer_filter.c.priority.in_(clean_addresses)
+                                            self.mailer_filter.c.mailer.in_(clean_addresses)
                                          ).order_by(
                                             self.mailer_filter.c.priority.desc()
                                          ).first()
