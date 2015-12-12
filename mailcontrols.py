@@ -1,7 +1,7 @@
 #!/usr/bin/python -u
 __version__ = {
-    "branch": "unstable",
-    "release": (0,1,0),
+    "branch": "stable",
+    "release": (0,2,0),
     "date": (0, 0, 0)
 }
 
