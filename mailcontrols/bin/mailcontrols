@@ -25,8 +25,11 @@ from email.parser import HeaderParser
 
 import os
 from os.path import exists, expanduser
+from pkg_resources import resource_exists, resource_stream
 
 from imapclient import IMAPClient
+
+import mailcontrols
 # loghandler object contains background thread and object to handle logging
 #     without plugins having to understand or support logging configuration
 from mailcontrols.loghandler import logworker, loghandler
@@ -83,7 +86,10 @@ def server_login(config):
 config = ConfigParser.RawConfigParser()
 
 # Load defaults first so all necessary options are guaranteed
-config.read(datadir + 'defaults.ini')
+if resource_exists("mailcontrols", "data/defaults.ini"):
+    config.readfp(resource_stream("mailcontrols", "data/defaults.ini"))
+else:
+    config.read(datadir + 'defaults.ini')
 
 # iterate over possible config file locations, loading first found.
 for filename in [
