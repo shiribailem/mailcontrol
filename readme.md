@@ -1,6 +1,6 @@
 #Mail Control#
-__Version 0.1__
-__Unstable__
+__Version 0.2__
+__Stable__
 
 
 Extremely early version of code. Beginning functionality lacking documentation.
