@@ -1,5 +1,5 @@
 class mailfilter:
-    def __init__(self,handle, log, **options):
+    def __init__(self, handle, log, **options):
         self.loghandler = log
 
     def prepare(self, handle):

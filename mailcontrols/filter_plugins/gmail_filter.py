@@ -42,18 +42,18 @@ from mailcontrols.filter_plugins import __filter
 
 
 class mailfilter(__filter.mailfilter):
-    def __init__(self,handle, log, dbsession, dbmeta, **options):
+    def __init__(self, handle, log, dbsession, dbmeta, **options):
         self.loghandler = log
 
         self.dbsession = dbsession
         self.dbmeta = dbmeta
 
         self.gmail_filter = Table('gmail_filter', self.dbmeta,
-                                 Column('id', Integer, primary_key=True, autoincrement=True),
-                                 Column('tag', String(255), index=True),
-                                 Column('seen', Boolean, default=False),
-                                 Column('folder', String(255), index=True),
-                                 )
+                                  Column('id', Integer, primary_key=True, autoincrement=True),
+                                  Column('tag', String(255), index=True),
+                                  Column('seen', Boolean, default=False),
+                                  Column('folder', String(255), index=True),
+                                  )
 
     def prepare(self, handle):
         if not handle.folder_exists("Gmail Tags"):
@@ -78,9 +78,9 @@ class mailfilter(__filter.mailfilter):
 
                 if result:
                     if result.seen:
-                        handler.set_flags(id,'\\seen')
-                    if not result.folder is None:
-                        handler.copy(id,result.folder)
+                        handler.set_flags(id, '\\seen')
+                    if result.folder is not None:
+                        handler.copy(id, result.folder)
                         handler.delete_messages(id)
                         handler.expunge()
                         return False

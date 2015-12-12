@@ -1,7 +1,7 @@
 #!/usr/bin/python -u
 __version__ = {
     "branch": "unstable",
-    "release": (0,1,0),
+    "release": (0, 1, 0),
     "date": (0, 0, 0)
 }
 
@@ -29,17 +29,16 @@ from os.path import exists, expanduser
 from imapclient import IMAPClient
 # loghandler object contains background thread and object to handle logging
 #     without plugins having to understand or support logging configuration
-import mailcontrols
 from mailcontrols.loghandler import logworker, loghandler
 from mailcontrols.filter_plugins import load_filter
 
 # Get package data directory
-datadir = os.path.join(os.path.dirname(__file__),'data/')
+datadir = os.path.join(os.path.dirname(__file__), 'data/')
 
 # Establish argument parser and process before doing anything else
 
 arguments = argparse.ArgumentParser(
-    description="Manage emails over IMAP via plugins.")
+        description="Manage emails over IMAP via plugins.")
 arguments.add_argument('-1', '--once',
                        help="Do not enter idle, exit after one run.",
                        action="store_true")
@@ -57,9 +56,9 @@ if args.skip:
 else:
     plugin_blacklist = []
 
-
 # Set a default timeout because some of these server connections can hang.
 socket.setdefaulttimeout(30)
+
 
 # since routine disconnects are expected (due to idle connections) putting
 # the connection process into a function so it's easily repeatable.
@@ -69,15 +68,16 @@ socket.setdefaulttimeout(30)
 #  See just about idle_done call for temporary fix.
 def server_login(config):
     server = IMAPClient(
-        config.get('imap','host'),
-        use_uid=True,
-        ssl=config.getboolean('imap','ssl')
+            config.get('imap', 'host'),
+            use_uid=True,
+            ssl=config.getboolean('imap', 'ssl')
     )
-    server.login(config.get('imap','username'), config.get('imap','password'))
+    server.login(config.get('imap', 'username'), config.get('imap', 'password'))
 
     select_info = server.select_folder('INBOX')
 
     return server
+
 
 # Create config objects
 config = ConfigParser.RawConfigParser()
@@ -87,25 +87,25 @@ config.read(datadir + 'defaults.ini')
 
 # iterate over possible config file locations, loading first found.
 for filename in [
-                    "mailcontrols.ini",
-                    "config.ini",
-                    "~/.mailcontrols/config.ini",
-                    "/etc/mailcontrols/config.ini",
-                    "~\\AppData\\Roaming\\mailcontrols\\config.ini",
-                    "C:\\mailcontrols\\config.ini"
-                ]:
+    "mailcontrols.ini",
+    "config.ini",
+    "~/.mailcontrols/config.ini",
+    "/etc/mailcontrols/config.ini",
+    "~\\AppData\\Roaming\\mailcontrols\\config.ini",
+    "C:\\mailcontrols\\config.ini"
+]:
     if exists(filename):
         # If found, load user config to override defaults
         config.read(expanduser(filename))
         break
 
 # Load user config second to override defaults
-#config.read('/etc/mailcontrols/config.ini')
+# config.read('/etc/mailcontrols/config.ini')
 
 # Break out 'addresses' value into a list.
 config.set('mailcontrols', 'addresses'
-           ,config.get('mailcontrols','addresses'
-            ).split(','))
+           , config.get('mailcontrols', 'addresses'
+                        ).split(','))
 
 # create an instance of the header parser, only need one and will re-use it
 # times.
@@ -113,7 +113,7 @@ hparser = HeaderParser()
 
 # Establish and connect to SQLAlchemy Database
 dbengine = sqlalchemy.create_engine(config.get('database', 'engine'),
-                            pool_recycle=3600)
+                                    pool_recycle=3600)
 
 dbmeta = sqlalchemy.MetaData()
 dbsessionmaker = sqlalchemy.orm.sessionmaker(autoflush=True)
@@ -136,7 +136,7 @@ server = server_login(config)
 print("Connected to Server.")
 
 # Basic debug info to identify how many emails were seen on first program run
-#print("Ignoring emails received prior to program start, %d ignored." % (len(past_emails)))
+# print("Ignoring emails received prior to program start, %d ignored." % (len(past_emails)))
 
 # empty lists to hold the plugin modules as we parse through them.
 # TODO: Add more complexity to store statistics and more elegant handling
@@ -147,17 +147,17 @@ filters = []
 # to pass the log queue to each of the plugins
 # defaults in class (see mailcontrols.loghandler) will have output go to
 # stderr
-logthread = logworker(debug_level=config.getint('mailcontrols','debug'))
+logthread = logworker(debug_level=config.getint('mailcontrols', 'debug'))
 logthread.start()
 
 # Find best plugins file
 for filename in [
-                    "filters.txt",
-                    "~/.mailcontrols/filters.txt",
-                    "/etc/mailcontrols/filters.txt",
-                    "~\\AppData\\Roaming\\mailcontrols\\filters.txt",
-                    "C:\\mailcontrols\\filters.txt"
-                ]:
+    "filters.txt",
+    "~/.mailcontrols/filters.txt",
+    "/etc/mailcontrols/filters.txt",
+    "~\\AppData\\Roaming\\mailcontrols\\filters.txt",
+    "C:\\mailcontrols\\filters.txt"
+]:
     if exists(expanduser(filename)):
         pluginfile = filename
         break
@@ -179,8 +179,8 @@ with open(pluginfile, 'r') as pluginindexfile:
                 # Create instance of mailfilter class present in each plugin.
                 # store in "filter" object alongside the module handle
                 pluginindex[pluginname]['filter'] = pluginindex[pluginname]['module'].mailfilter(
-                    server, loghandler(line.strip(), logqueue=logthread.queue),
-                    dbsession=dbsession, dbmeta=dbmeta, config=config)
+                        server, loghandler(line.strip(), logqueue=logthread.queue),
+                        dbsession=dbsession, dbmeta=dbmeta, config=config)
 
                 # Filters list serves for tracking the order of filters run.
                 filters.append(pluginname)
@@ -193,8 +193,8 @@ with open(pluginfile, 'r') as pluginindexfile:
                 # will give the plugin name and use traceback to include the
                 # exception
                 loghandler("PLUGINS", logthread.queue).output(
-                    "Error initializing plugin %s.\n%s" %
-                    (line.strip(), traceback.format_exc()), 0)
+                        "Error initializing plugin %s.\n%s" %
+                        (line.strip(), traceback.format_exc()), 0)
         else:
             print("%s blocked with --skip flag." % line.strip())
 
@@ -246,7 +246,7 @@ while True:
             # Extremely verbose debug info, mostly just so I can track failure
             # locations and watch output to see if it hangs somewhere.
             loghandler('IDLE', logqueue=logthread.queue).output(
-                "Entering Idle", 10)
+                    "Entering Idle", 10)
 
             # put server connection into IDLE state, no active commands can be
             # sent while idle.
@@ -254,7 +254,7 @@ while True:
             # block on idle_check, this will block the program until either
             # activity is seen on the server, or the idle_timeout in seconds
             # passed.
-            idle_debug = server.idle_check(config.getfloat('imap','idle_timeout'))
+            idle_debug = server.idle_check(config.getfloat('imap', 'idle_timeout'))
 
             # More heavily verbose statements, this one just outputs whatever
             # the server sent from idle... will eventually want to actually
@@ -291,9 +291,9 @@ while True:
         # If we're here, just logging that the check for new emails found
         # something and we're continuing.
         loghandler(
-            'IDLE', logqueue=logthread.queue).output(
-            "Skipping idle as new activity received during last plugin run.",
-            4)
+                'IDLE', logqueue=logthread.queue).output(
+                "Skipping idle as new activity received during last plugin run.",
+                4)
 
     # Create an error tracker boolean. If true, we'll later skip running the
     # filters.
@@ -305,15 +305,15 @@ while True:
     # cycle.
     try:
         loghandler('SERVER', logqueue=logthread.queue).output(
-            "Searching for new emails.", 4)
+                "Searching for new emails.", 4)
         messages = server.search()
         # Debug message trying to isolate hangs in the program at likely spots.
         loghandler('SERVER', logqueue=logthread.queue).output(
-            "Found %i emails total." % (len(messages)), 10)
+                "Found %i emails total." % (len(messages)), 10)
     except:
         error = True
         loghandler('SEARCH', logqueue=logthread.queue).output(
-            "Error checking message list. Reconnecting Server.", 5)
+                "Error checking message list. Reconnecting Server.", 5)
         try:
             server = server_login(config)
         except:
@@ -361,12 +361,12 @@ while True:
                             # them) so this can provide things like the plugin name
                             # and error statistics.
                             loghandler('PLUGINS', logqueue=logthread.queue).output(
-                                "Error Executing plugin.\n"
-                                + traceback.format_exc(), 1)
+                                    "Error Executing plugin.\n"
+                                    + traceback.format_exc(), 1)
                 except:
                     loghandler('SERVER', logqueue=logthread.queue).output(
-                        "Error with message id %i" % msgid,
-                        10
+                            "Error with message id %i" % msgid,
+                            10
                     )
 
         # When done, add list of ids to past_emails list so we know these have

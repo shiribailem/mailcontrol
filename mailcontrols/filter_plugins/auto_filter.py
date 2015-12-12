@@ -67,7 +67,7 @@ class mailfilter(__filter.mailfilter):
             if not handle.folder_exists(result.folder):
                 handle.create_folder(result.folder)
 
-    def __check_rules(self,header,rules):
+    def __check_rules(self, header, rules):
         for rule in rules:
             if rule.subject:
                 if re.search(rule.subject, header["Subject"]):
@@ -77,13 +77,12 @@ class mailfilter(__filter.mailfilter):
 
         return None
 
-
     def filter(self, handler, msgid, header):
-        basequery = self.dbsession.query(self.auto_filter).\
+        basequery = self.dbsession.query(self.auto_filter). \
             order_by(
                 self.auto_filter.c.username.desc(),
                 self.auto_filter.c.subject.desc()
-            )
+        )
 
         address = header['From'].split('<')[-1].split('>')[0].strip().lower()
         username, domain = address.split('@')
@@ -98,17 +97,16 @@ class mailfilter(__filter.mailfilter):
             self.loghandler.output("Testing %s" % testdomain, 10)
 
             results.extend(basequery.filter_by(
-                domain=testdomain,
-                username=None
+                    domain=testdomain,
+                    username=None
             ).all())
 
         result = self.__check_rules(header, results)
 
-
         if result:
             if result.seen:
                 handler.set_flags(msgid, '\\seen')
-            if not result.folder is None:
+            if result.folder is not None:
                 handler.copy(msgid, result.folder)
                 handler.delete_messages(msgid)
                 self.loghandler.output("Filtered message from %s to %s" % (address, result.folder), 1)
@@ -117,6 +115,6 @@ class mailfilter(__filter.mailfilter):
                 return False
 
         self.loghandler.output(
-            "Received message id %d, From: %s with Subject: %s" % (
-                msgid, header['From'], header['Subject']), 10)
+                "Received message id %d, From: %s with Subject: %s" % (
+                    msgid, header['From'], header['Subject']), 10)
         return True

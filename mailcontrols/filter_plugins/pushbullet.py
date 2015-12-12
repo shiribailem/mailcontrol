@@ -17,7 +17,7 @@ Requires config section:
 
 """
 
-#TODO: Add Database Table Spec to Docstring
+# TODO: Add Database Table Spec to Docstring
 
 import json
 import re
@@ -32,16 +32,16 @@ from mailcontrols.filter_plugins import __filter
 # TODO: Add database functionality for selective notifications
 
 class mailfilter(__filter.mailfilter):
-    def __init__(self,handle, log, dbsession, dbmeta, config, **options):
+    def __init__(self, handle, log, dbsession, dbmeta, config, **options):
         self.loghandler = log
 
-        if not config.has_section('pushbullet') or not config.has_option('pushbullet','access_token'):
+        if not config.has_section('pushbullet') or not config.has_option('pushbullet', 'access_token'):
             raise Exception("pushbullet", "Missing required config options!")
 
-        self.access_token = config.get('pushbullet','access_token')
+        self.access_token = config.get('pushbullet', 'access_token')
 
-        if config.has_option('pushbullet','notify_all'):
-            self.notify_all = config.getboolean('pushbullet','notify_all')
+        if config.has_option('pushbullet', 'notify_all'):
+            self.notify_all = config.getboolean('pushbullet', 'notify_all')
         else:
             self.notify_all = True
 
@@ -70,11 +70,11 @@ class mailfilter(__filter.mailfilter):
         return None
 
     def filter(self, handler, msgid, header):
-        basequery = self.dbsession.query(self.push_filter).\
+        basequery = self.dbsession.query(self.push_filter). \
             order_by(
                 self.push_filter.c.username.desc(),
                 self.push_filter.c.subject.desc()
-            )
+        )
 
         address = header['From'].split('<')[-1].split('>')[0].strip().lower()
         username, domain = address.split('@')
@@ -89,8 +89,8 @@ class mailfilter(__filter.mailfilter):
             self.loghandler.output("Testing %s" % testdomain, 10)
 
             results.extend(basequery.filter_by(
-                domain=testdomain,
-                username=None
+                    domain=testdomain,
+                    username=None
             ).all())
 
         result = self.__check_rules(header, results)
@@ -102,9 +102,9 @@ class mailfilter(__filter.mailfilter):
                 title = "New Email"
 
             requests.post('https://api.pushbullet.com/v2/pushes', data=json.dumps(
-                {'body': header["From"] + ": " + header['Subject']
-                         + " (" + datetime.now().time().isoformat() + ")",
-                 'title': title, 'type': 'note'}),
+                    {'body': header["From"] + ": " + header['Subject']
+                             + " (" + datetime.now().time().isoformat() + ")",
+                     'title': title, 'type': 'note'}),
                           headers={'Access-Token': self.access_token,
                                    'Content-Type': 'application/json'})
             self.loghandler.output("Pushed: %s: %s: %s (%s)" % (
@@ -113,6 +113,6 @@ class mailfilter(__filter.mailfilter):
             ), 10)
 
         self.loghandler.output(
-            "Received message id %d, From: %s with Subject: %s" % (
-                msgid, header['From'], header['Subject']), 10)
+                "Received message id %d, From: %s with Subject: %s" % (
+                    msgid, header['From'], header['Subject']), 10)
         return True

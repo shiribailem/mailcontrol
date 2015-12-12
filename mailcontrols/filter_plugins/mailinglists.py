@@ -24,7 +24,7 @@ from mailcontrols.filter_plugins import __filter
 
 
 class mailfilter(__filter.mailfilter):
-    def __init__(self,handle, log, dbsession, dbmeta, config, **options):
+    def __init__(self, handle, log, dbsession, dbmeta, config, **options):
         self.loghandler = log
 
         self.dbsession = dbsession
@@ -32,12 +32,12 @@ class mailfilter(__filter.mailfilter):
         self.addresses = config.get('mailcontrols', 'addresses')
 
         self.mailer_filter = Table('mailer_filter', self.dbmeta,
-                                 Column('id', Integer, primary_key=True, autoincrement=True),
-                                 Column('mailer', String(255), index=True),
-                                 Column('seen', Boolean, default=False),
-                                 Column('folder', String(255), index=True),
-                                 Column('priority', Integer, default=0)
-                                 )
+                                   Column('id', Integer, primary_key=True, autoincrement=True),
+                                   Column('mailer', String(255), index=True),
+                                   Column('seen', Boolean, default=False),
+                                   Column('folder', String(255), index=True),
+                                   Column('priority', Integer, default=0)
+                                   )
 
     def prepare(self, handle):
         if not handle.folder_exists("Mailing Lists"):
@@ -56,13 +56,12 @@ class mailfilter(__filter.mailfilter):
         if header['Bcc']:
             addresses.extend(header['Bcc'].lower().split(','))
 
-
         blind_check = True
         clean_addresses = []
 
         for address in addresses:
             clean_addresses.append(
-                address.split("<")[-1].split('>')[0].strip().lower())
+                    address.split("<")[-1].split('>')[0].strip().lower())
 
         for address in self.addresses:
             if address in clean_addresses:
@@ -72,23 +71,23 @@ class mailfilter(__filter.mailfilter):
 
         if blind_check:
             rule = self.dbsession.query(self.mailer_filter
-                                         ).filter(
-                                            self.mailer_filter.c.mailer.in_(clean_addresses)
-                                         ).order_by(
-                                            self.mailer_filter.c.priority.desc()
-                                         ).first()
+                                        ).filter(
+                    self.mailer_filter.c.mailer.in_(clean_addresses)
+            ).order_by(
+                    self.mailer_filter.c.priority.desc()
+            ).first()
 
             if rule is None:
                 self.loghandler.output("Defaulting to filter into Mailing Lists.", 5)
                 handler.copy(id, 'Mailing Lists')
             else:
                 self.loghandler.output(
-                    "Rule for %s processing. Seen:%i, Folder:%s" % (
-                        rule.mailer, rule.seen, rule.folder)
-                    , 5)
+                        "Rule for %s processing. Seen:%i, Folder:%s" % (
+                            rule.mailer, rule.seen, rule.folder)
+                        , 5)
                 if rule.seen:
                     handler.set_flags(id, '\\seen')
-                if not rule.folder is None:
+                if rule.folder is not None:
                     handler.copy(id, rule.folder)
                 else:
                     self.loghandler.output("No folder specified to filter into Mailing Lists.", 10)

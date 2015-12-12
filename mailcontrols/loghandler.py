@@ -5,6 +5,7 @@ from sys import stderr
 from Queue import Queue
 from datetime import datetime
 
+
 class logworker(threading.Thread):
     def __init__(self, debug_level=0, stderr_copy=False, logfile=stderr):
         threading.Thread.__init__(self)
@@ -34,5 +35,5 @@ class loghandler:
 
         self.queue = logqueue
 
-    def output(self,msg, debug_level=0):
+    def output(self, msg, debug_level=0):
         self.queue.put((msg, self.plugin, debug_level))
