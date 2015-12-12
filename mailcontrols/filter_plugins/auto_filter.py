@@ -37,6 +37,8 @@ options:
 import re
 
 from sqlalchemy import Table, Column, Integer, String, Boolean, Index
+from jinja2 import Template
+from pkg_resources import resource_string
 
 from mailcontrols.filter_plugins import __filter
 
@@ -118,3 +120,12 @@ class mailfilter(__filter.mailfilter):
                 "Received message id %d, From: %s with Subject: %s" % (
                     msgid, header['From'], header['Subject']), 10)
         return True
+
+    def admin(self, params, **options):
+        rules = self.dbsession.query(self.auto_filter).all()
+
+        return Template(
+                resource_string("mailcontrols",
+                                "/webtemplates/auto_filter_index.html.jinja"
+                                )
+                ).render(rules=rules)
