@@ -89,14 +89,14 @@ config.read(datadir + 'defaults.ini')
 for filename in [
     "mailcontrols.ini",
     "config.ini",
-    "~/.mailcontrols/config.ini",
+    expanduser("~/.mailcontrols/config.ini"),
     "/etc/mailcontrols/config.ini",
-    "~\\AppData\\Roaming\\mailcontrols\\config.ini",
+    expanduser("~\\AppData\\Roaming\\mailcontrols\\config.ini"),
     "C:\\mailcontrols\\config.ini"
 ]:
     if exists(filename):
         # If found, load user config to override defaults
-        config.read(expanduser(filename))
+        config.read(filename)
         break
 
 # Load user config second to override defaults
@@ -153,12 +153,12 @@ logthread.start()
 # Find best plugins file
 for filename in [
     "filters.txt",
-    "~/.mailcontrols/filters.txt",
+    expanduser("~/.mailcontrols/filters.txt"),
     "/etc/mailcontrols/filters.txt",
-    "~\\AppData\\Roaming\\mailcontrols\\filters.txt",
+    expanduser("~\\AppData\\Roaming\\mailcontrols\\filters.txt"),
     "C:\\mailcontrols\\filters.txt"
 ]:
-    if exists(expanduser(filename)):
+    if exists(filename):
         pluginfile = filename
         break
 
@@ -353,7 +353,7 @@ while True:
                             # Run filter function of each plugin.
                             # If the function returns False, this means to stop
                             # running filters on this email.
-                            if not pluginname[mailfilter]['filter'].filter(server, msgid, header):
+                            if not pluginindex[mailfilter]['filter'].filter(server, msgid, header):
                                 break
                         except:
                             # If an error is caught in the filter, log it here.
