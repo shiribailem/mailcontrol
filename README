@@ -1,0 +1,41 @@
+#Mail Control#
+__Version 0.3__
+__Unstable__
+
+
+Somewhat stable version of code... still lacking in documentation
+
+Requires sqlalchemy, imapclient, and requests. All included in setup.py. Database modules are not included.
+
+Config files are loaded from one of the following (in order of priority):
+
+* ./mailcontrols.ini (config ini only)
+* current working directory
+* ~/.mailcontrols/ (recommended)
+* /etc/mailcontrols/
+* ~\AppData\Roaming\mailcontrols\
+* C:\mailcontrols\
+
+Two config files are used: config.ini and filterst.txt
+
+Examples configuration files can be found in the mailcontrols/examples directory
+
+Database settings are passed to the sqlalchemy connect statement in parts.
+Type is the sqlalchemy connector.
+Other components are the typical expected options.
+
+No database templates are necessary, plugins load table descriptions in their initialization,
+sqlalchemy then creates tables in response.
+
+Filters are loaded from filters.txt by filename (without extension) and filters are applied in the order listed.
+
+The following locations are searched for filters, in order:
+
+* ~/.mailcontrols/filters/
+* /var/lib/mailcontrols/filters/ (recommended for additional filters)
+* /etc/mailcontrols/filters/
+* ~\AppData\Roaming\mailcontrols\filters\
+* C:\mailcontrols\filters\
+* built in filters
+
+Filter plugins store configuration information in the database, details are present in the individual modules.

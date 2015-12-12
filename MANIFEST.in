@@ -1,0 +1,4 @@
+include README
+include changelog.md
+recursive-include mailcontrols/examples *
+recursive-include mailcontrols/data *

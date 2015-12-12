@@ -15,18 +15,26 @@ __version__ = {
 # SQLAlchemy is being used to allow the system to be database agnostic
 # ConfigParser to process the config files (ini format)
 # argparse to handle command line arguments
+import ConfigParser
+import argparse
+import socket
 import sqlalchemy
 import sqlalchemy.orm
-from imapclient import IMAPClient
-from email.parser import HeaderParser
-import ConfigParser
 import traceback
-import socket
-import argparse
+from email.parser import HeaderParser
 
+import os
+from os.path import exists, expanduser
+
+from imapclient import IMAPClient
 # loghandler object contains background thread and object to handle logging
 #     without plugins having to understand or support logging configuration
-from mailcontrol.loghandler import logworker, loghandler
+import mailcontrols
+from mailcontrols.loghandler import logworker, loghandler
+from mailcontrols.filter_plugins import load_filter
+
+# Get package data directory
+datadir = os.path.join(os.path.dirname(__file__),'data/')
 
 # Establish argument parser and process before doing anything else
 
@@ -75,14 +83,28 @@ def server_login(config):
 config = ConfigParser.RawConfigParser()
 
 # Load defaults first so all necessary options are guaranteed
-config.read('mailcontrol/defaults.ini')
+config.read(datadir + 'defaults.ini')
+
+# iterate over possible config file locations, loading first found.
+for filename in [
+                    "mailcontrols.ini",
+                    "config.ini",
+                    "~/.mailcontrols/config.ini",
+                    "/etc/mailcontrols/config.ini",
+                    "~\\AppData\\Roaming\\mailcontrols\\config.ini",
+                    "C:\\mailcontrols\\config.ini"
+                ]:
+    if exists(filename):
+        # If found, load user config to override defaults
+        config.read(expanduser(filename))
+        break
 
 # Load user config second to override defaults
-config.read('config.ini')
+#config.read('/etc/mailcontrols/config.ini')
 
 # Break out 'addresses' value into a list.
-config.set('mailcontrol', 'addresses'
-           ,config.get('mailcontrol','addresses'
+config.set('mailcontrols', 'addresses'
+           ,config.get('mailcontrols','addresses'
             ).split(','))
 
 # create an instance of the header parser, only need one and will re-use it
@@ -123,24 +145,36 @@ filters = []
 
 # Start up the log thread and get the object as we'll need it at this point
 # to pass the log queue to each of the plugins
-# defaults in class (see mailcontrol.loghandler) will have output go to
+# defaults in class (see mailcontrols.loghandler) will have output go to
 # stderr
-logthread = logworker(debug_level=config.getint('mailcontrol','debug'))
+logthread = logworker(debug_level=config.getint('mailcontrols','debug'))
 logthread.start()
 
-# parse through the plugins.txt file, each line is just the name of a file in
+# Find best plugins file
+for filename in [
+                    "filters.txt",
+                    "~/.mailcontrols/filters.txt",
+                    "/etc/mailcontrols/filters.txt",
+                    "~\\AppData\\Roaming\\mailcontrols\\filters.txt",
+                    "C:\\mailcontrols\\filters.txt"
+                ]:
+    if exists(expanduser(filename)):
+        pluginfile = filename
+        break
+
+# parse through the filters.txt file, each line is just the name of a file in
 # the plugins folder
 # order matters as the filters in each plugin will be run from top to bottom
 # and filters can (intentionally) make the system skip all filters after it
-with open('plugins.txt', 'r') as pluginindexfile:
+with open(pluginfile, 'r') as pluginindexfile:
     for line in pluginindexfile.readlines():
         if not line.strip() in plugin_blacklist:
             try:
                 # Going to use this a lot, clean it up now to save time.
                 pluginname = line.strip()
 
-                # use __import__ to load each plugin to the pluginindex dictionary
-                pluginindex[pluginname] = {'module': __import__('plugins.' + pluginname, fromlist=[''])}
+                # Call load_filter to import each filter as a module
+                pluginindex[pluginname] = {"module": load_filter(pluginname)}
 
                 # Create instance of mailfilter class present in each plugin.
                 # store in "filter" object alongside the module handle
