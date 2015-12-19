@@ -23,7 +23,7 @@ def filter_list():
             "</html>"
         ).render(filters=filters.keys())
 
-@bottle.route("/filters/<plugin>")
+@bottle.route("/filters/<plugin>", method=["GET", "POST"])
 def filter_admin(plugin):
     global filters
     if not plugin in filters.keys():

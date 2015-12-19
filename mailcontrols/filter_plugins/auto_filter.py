@@ -35,13 +35,18 @@ options:
 """
 
 import re
+import json
 
 from sqlalchemy import Table, Column, Integer, String, Boolean, Index
+from sqlalchemy import insert as sqlinsert
+from sqlalchemy import update as sqlupdate
 from jinja2 import Template
 from pkg_resources import resource_string
 
 from mailcontrols.filter_plugins import __filter
 
+import pickle
+from datetime import datetime
 
 class mailfilter(__filter.mailfilter):
     def __init__(self, handle, log, dbsession, dbmeta, **options):
@@ -122,10 +127,45 @@ class mailfilter(__filter.mailfilter):
         return True
 
     def admin(self, params, **options):
-        rules = self.dbsession.query(self.auto_filter).all()
+        if params.get('function') == '' or params.get('function') is None:
+            rules = self.dbsession.query(self.auto_filter).all()
 
-        return Template(
-                resource_string("mailcontrols",
-                                "/webtemplates/auto_filter_index.html.jinja"
-                                )
-                ).render(rules=rules)
+            return Template(
+                    resource_string("mailcontrols",
+                                    "/webtemplates/auto_filter_index.html.jinja"
+                                    )
+                    ).render(rules=rules)
+        elif params.get('function') == "update":
+            data = {
+                "username": params.get("username", default=''),
+                "domain": params.get("domain", default=''),
+                "seen": params.get("seen", default=''),
+                "folder": params.get("folder", default=''),
+                "subject": params.get("subject", default='')
+            }
+
+            if data["domain"].strip() == "":
+                return "Domain Required."
+
+            if data["username"] == "":
+                data['username'] = None
+
+            if data['seen'] == "on":
+                data["seen"] = True
+            else:
+                data["seen"] = False
+
+            if data["folder"].strip() == "":
+                data['folder'] = None
+
+            if data["subject"].strip() == "" or data["subject"] == "None":
+                data['subject'] = None
+
+            if params.get("id") == "new":
+                self.dbsession.execute(sqlinsert(self.auto_filter).values(data))
+            else:
+                self.dbsession.execute(sqlupdate(self.auto_filter).values(data).where(self.auto_filter.c.id == params.get("id", type=int)))
+
+            self.dbsession.commit()
+
+            return "Updated.<br/><pre>%s</pre>" % json.dumps(data)

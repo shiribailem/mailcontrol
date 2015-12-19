@@ -6,23 +6,45 @@
 <body>
 
 <h1>Current Rules</h1>
-<table>
+<table border=1>
     <tr>
         <th>ID</th>
-        <th>Address</th>
+        <th>Username</th>
+        <th>@</th>
+        <th>Domain</th>
         <th>Mark Seen?</th>
         <th>Destination</th>
         <th>Subject Match</th>
+        <th>Submit</th>
     </tr>
     {% for item in rules %}
     <tr>
-        <td>{{ item.id }}</td>
-        <td>{% if not item.username %}*{% else %}{{ item.username }}{% endif %}@{{ item.domain }}</td>
-        <td>{{ item.seen }}</td>
-        <td>{{ item.folder }}</td>
-        <td>{{ item.subject }}</td>
+        <form method="post">
+            <input type="hidden" name="function" value="update"></input>
+            <td><input type="text" name="id" value="{{ item.id }}" readonly></input></td>
+            <td><input type="text" name="username" value="{% if item.username %}{{ item.username }}{% endif %}"></input></td>
+            <td>@</td>
+            <td><input type="text" name="domain" value="{{ item.domain }}"></input></td>
+            <td><input type="checkbox" name="seen" value={{ item.seen }}></input></td>
+            <td><input type="text" name="folder" value="{{ item.folder }}"></input></td>
+            <td><input type="text" name="subject" value="{{ item.subject }}"></input></td>
+            <td><input type="submit"></input></td>
+        </form>
     </tr>
     {%  endfor %}
+    <tr>
+        <form method="post">
+            <input type="hidden" name="function" value="update"></input>
+            <td><input type="text" name="id" value="new" readonly></input></td>
+            <td><input type="text" name="username"></input></td>
+            <td>@</td>
+            <td><input type="text" name="domain"></input></td>
+            <td><input type="checkbox" name="seen"></input></td>
+            <td><input type="text" name="folder"></input></td>
+            <td><input type="text" name="subject"></input></td>
+            <td><input type="submit"></input></td>
+        </form>
+    </tr>
 </table>
 
 </body>
