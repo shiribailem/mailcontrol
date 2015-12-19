@@ -1,4 +1,10 @@
 __0.3 Unstable__
+__2015-12-19__
+
+* Implemented web admin interface (default localhost:2525)
+* Added basic support for interface in auto_filter filter
+
+__0.3 Unstable__
 __2015-12-11__
 
 Major Overhaul!
