@@ -45,8 +45,6 @@ from pkg_resources import resource_string
 
 from mailcontrols.filter_plugins import __filter
 
-import pickle
-from datetime import datetime
 
 class mailfilter(__filter.mailfilter):
     def __init__(self, handle, log, dbsession, dbmeta, **options):
