@@ -54,12 +54,12 @@ class mailfilter(__filter.mailfilter):
             handle.create_folder("Unknown Domain")
 
     def filter(self, handler, id, header):
+        unknown = True
+
         if '@' in header['From']:
             domain = header['From'].split('<')[-1].split('>')[0].split('@')[-1].split(' ')[0].strip().lower()
 
             self.loghandler.output("Checking message from %s" % (domain), 4)
-
-            unknown = True
 
             domainparts = domain.split('.')
             for i in range(-(len(domainparts)), 0):
@@ -72,14 +72,15 @@ class mailfilter(__filter.mailfilter):
                     unknown = False
                     break
 
-            if unknown:
-                flags = handler.get_flags(id)[id]
-                handler.copy(id, 'Unknown Domain')
+        if unknown:
+            flags = handler.get_flags(id)[id]
+            handler.copy(id, 'Unknown Domain')
 
-                handler.delete_messages(id)
-                handler.expunge()
+            handler.delete_messages(id)
+            handler.expunge()
 
-                self.loghandler.output("%s is unknown, moving." % (domain), 1)
+            self.loghandler.output("%s is unknown, moving." % (domain), 1)
+
 
         self.loghandler.output(
             "Received message id %d, From: %s with Subject: %s" % (id, header['From'], header['Subject']), 10)
