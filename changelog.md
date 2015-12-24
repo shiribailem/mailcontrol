@@ -1,4 +1,9 @@
 __0.3 Unstable__
+__2015-12-23__
+
+* Modified "Unknown Domain" to automatically flag emails not containing an @ in the from field
+
+__0.3 Unstable__
 __2015-12-19__
 
 * Implemented web admin interface (default localhost:2525)
