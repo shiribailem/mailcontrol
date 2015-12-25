@@ -198,4 +198,5 @@ class mailfilter(__filter.mailfilter):
             else:
                 self.dbhandle.execute(sqlupdate(self.auto_filter).values(data).where(self.auto_filter.c.id == params.get("id", type=int)))
 
-            return "Updated.<br/><pre>%s</pre>" % json.dumps(data)
+            return "Update Successful.<br/><pre>%s</pre>" \
+                   "<a href onclick='window.history.go(-1);'>Return</a>" % json.dumps(data)
