@@ -74,7 +74,7 @@ class mailfilter(__filter.mailfilter):
         if blind_check:
             rule = self.dbhandle.execute(
                         self.mailer_filter.select().
-                            filter(
+                            where(
                                 self.mailer_filter.c.mailer.in_(clean_addresses)
                             ).
                             order_by(
