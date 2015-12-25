@@ -40,6 +40,8 @@ import json
 from sqlalchemy import Table, Column, Integer, String, Boolean, Index
 from sqlalchemy import insert as sqlinsert
 from sqlalchemy import update as sqlupdate
+from sqlalchemy import and_, or_, not_
+import sqlalchemy.sql as sql
 from jinja2 import Template
 from pkg_resources import resource_string
 
@@ -47,11 +49,11 @@ from mailcontrols.filter_plugins import __filter
 
 
 class mailfilter(__filter.mailfilter):
-    def __init__(self, handle, log, dbsession, dbmeta, **options):
+    def __init__(self, handle, log, dbhandle, dbmeta, **options):
         self.loghandler = log
 
-        self.dbsession = dbsession
         self.dbmeta = dbmeta
+        self.dbhandle = dbhandle
 
         self.auto_filter = Table('auto_filter', self.dbmeta,
                                  Column('id', Integer, primary_key=True, autoincrement=True),
@@ -66,7 +68,7 @@ class mailfilter(__filter.mailfilter):
                                  )
 
     def prepare(self, handle):
-        results = self.dbsession.query(self.auto_filter).distinct().values(self.auto_filter.c.folder)
+        results = self.dbhandle.execute(sql.select([self.auto_filter.c.folder]).distinct())
 
         for result in results:
             if not handle.folder_exists(result.folder):
@@ -83,38 +85,64 @@ class mailfilter(__filter.mailfilter):
         return None
 
     def filter(self, handler, msgid, header):
-        basequery = self.dbsession.query(self.auto_filter). \
-            order_by(
-                self.auto_filter.c.username.desc(),
-                self.auto_filter.c.subject.desc()
-        )
+        basequery = self.dbhandle.execute(
+                self.auto_filter.select().order_by(
+                    self.auto_filter.c.username.desc(),
+                    self.auto_filter.c.subject.desc()
+                )
+            )
 
         address = header['From'].split('<')[-1].split('>')[0].strip().lower()
         username, domain = address.split('@')
 
         filter_match = False
 
-        results = basequery.filter_by(username=username, domain=domain).all()
+        results = self.dbhandle.execute(basequery.where(
+                        and_(
+                            self.auto_filter.c.username == username,
+                            self.auto_filter.c.domain == domain,
+                            self.auto_filter.c.subject != None
+                            )
+                        )
+                    )
 
-        domainparts = domain.split('.')
-        for i in range(-(len(domainparts)), 0):
-            testdomain = '.'.join(domainparts[i:len(domainparts)])
-            self.loghandler.output("Testing %s" % testdomain, 10)
+        rule = None
 
-            results.extend(basequery.filter_by(
-                    domain=testdomain,
-                    username=None
-            ).all())
+        for entry in results:
+            if re.search(entry.subject, header["Subject"]):
+                rule = entry
 
-        result = self.__check_rules(header, results)
+        if rule is None:
 
-        if result:
-            if result.seen:
+            domainparts = domain.split('.')
+            for i in range(-(len(domainparts)), 0):
+                testdomain = '.'.join(domainparts[i:len(domainparts)])
+                self.loghandler.output("Testing %s" % testdomain, 10)
+
+                results.extend(basequery.filter_by(
+                        domain=testdomain,
+                        username=None
+                ).all())
+
+                rule = self.dbhandle.execute(basequery.where(
+                        and_(
+                            self.auto_filter.c.username == username,
+                            self.auto_filter.c.domain == testdomain,
+                            self.auto_filter.c.subject == None
+                            )
+                        )
+                    ).first()
+
+                if rule is not None:
+                    break
+
+        if rule:
+            if rule.seen:
                 handler.set_flags(msgid, '\\seen')
-            if result.folder is not None:
-                handler.copy(msgid, result.folder)
+            if rule.folder is not None:
+                handler.copy(msgid, rule.folder)
                 handler.delete_messages(msgid)
-                self.loghandler.output("Filtered message from %s to %s" % (address, result.folder), 1)
+                self.loghandler.output("Filtered message from %s to %s" % (address, rule.folder), 1)
                 handler.expunge()
 
                 return False
@@ -126,7 +154,7 @@ class mailfilter(__filter.mailfilter):
 
     def admin(self, params, **options):
         if params.get('function') == '' or params.get('function') is None:
-            rules = self.dbsession.query(self.auto_filter).all()
+            rules = self.dbhandle.execute(self.auto_filter.select()).fetchall()
 
             return Template(
                     resource_string("mailcontrols",
@@ -160,10 +188,8 @@ class mailfilter(__filter.mailfilter):
                 data['subject'] = None
 
             if params.get("id") == "new":
-                self.dbsession.execute(sqlinsert(self.auto_filter).values(data))
+                self.dbhandle.execute(sqlinsert(self.auto_filter).values(data))
             else:
-                self.dbsession.execute(sqlupdate(self.auto_filter).values(data).where(self.auto_filter.c.id == params.get("id", type=int)))
-
-            self.dbsession.commit()
+                self.dbhandle.execute(sqlupdate(self.auto_filter).values(data).where(self.auto_filter.c.id == params.get("id", type=int)))
 
             return "Updated.<br/><pre>%s</pre>" % json.dumps(data)

@@ -37,15 +37,15 @@ options:
 """
 
 from sqlalchemy import Table, Column, Integer, String, Boolean
-
+import sqlalchemy.sql as sql
 from mailcontrols.filter_plugins import __filter
 
 
 class mailfilter(__filter.mailfilter):
-    def __init__(self, handle, log, dbsession, dbmeta, **options):
+    def __init__(self, handle, log, dbhandle, dbmeta, **options):
         self.loghandler = log
 
-        self.dbsession = dbsession
+        self.dbhandle = dbhandle
         self.dbmeta = dbmeta
 
         self.gmail_filter = Table('gmail_filter', self.dbmeta,
@@ -59,7 +59,7 @@ class mailfilter(__filter.mailfilter):
         if not handle.folder_exists("Gmail Tags"):
             handle.create_folder("Gmail Tags")
 
-        results = self.dbsession.query(self.gmail_filter).distinct().values(self.gmail_filter.c.folder)
+        results = self.dbhandle.execute(sql.select([self.gmail_filter.c.folder]).distinct())
 
         for result in results:
             if not handle.folder_exists(result.folder):
@@ -74,7 +74,13 @@ class mailfilter(__filter.mailfilter):
 
                 self.loghandler.output("Found tag: " + tag, 1)
 
-                result = self.dbsession.query(self.gmail_filter).filter_by(tag=tag).first()
+                result = self.dbhandle.execute(
+                            self.gmail_filter.
+                                select().
+                                where(
+                                    self.gmail_filter.c.tag == tag
+                                )
+                        ).first()
 
                 if result:
                     if result.seen:

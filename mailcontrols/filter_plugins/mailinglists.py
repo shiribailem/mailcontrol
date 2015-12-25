@@ -19,15 +19,17 @@ Mailing Lists: Sort emails that didn't specify you in "To"
 """
 
 from sqlalchemy import Table, Column, Integer, String, Boolean
+from sqlalchemy import and_, or_, not_
+import sqlalchemy.sql as sql
 
 from mailcontrols.filter_plugins import __filter
 
 
 class mailfilter(__filter.mailfilter):
-    def __init__(self, handle, log, dbsession, dbmeta, config, **options):
+    def __init__(self, handle, log, dbhandle, dbmeta, config, **options):
         self.loghandler = log
 
-        self.dbsession = dbsession
+        self.dbhandle = dbhandle
         self.dbmeta = dbmeta
         self.addresses = config.get('mailcontrols', 'addresses')
 
@@ -43,7 +45,7 @@ class mailfilter(__filter.mailfilter):
         if not handle.folder_exists("Mailing Lists"):
             handle.create_folder("Mailing Lists")
 
-        results = self.dbsession.query(self.mailer_filter).distinct().values(self.mailer_filter.c.folder)
+        results = self.dbhandle.execute(sql.select([self.mailer_filter.c.folder]).distinct())
 
         for result in results:
             if not handle.folder_exists(result.folder):
@@ -70,12 +72,15 @@ class mailfilter(__filter.mailfilter):
         self.loghandler.output("Received addresses: " + ', '.join(clean_addresses), 10)
 
         if blind_check:
-            rule = self.dbsession.query(self.mailer_filter
-                                        ).filter(
-                    self.mailer_filter.c.mailer.in_(clean_addresses)
-            ).order_by(
-                    self.mailer_filter.c.priority.desc()
-            ).first()
+            rule = self.dbhandle.execute(
+                        self.mailer_filter.select().
+                            filter(
+                                self.mailer_filter.c.mailer.in_(clean_addresses)
+                            ).
+                            order_by(
+                                self.mailer_filter.c.priority.desc()
+                            )
+                    ).first()
 
             if rule is None:
                 self.loghandler.output("Defaulting to filter into Mailing Lists.", 5)

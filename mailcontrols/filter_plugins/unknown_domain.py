@@ -30,15 +30,16 @@ Any emails not found in the list will be moved to the "Unknown Domain" folder.
 """
 
 from sqlalchemy import Table, Column, String
+import sqlalchemy.sql as sql
 
 from mailcontrols.filter_plugins import __filter
 
 
 class mailfilter(__filter.mailfilter):
-    def __init__(self, handle, log, dbsession, dbmeta, **options):
+    def __init__(self, handle, log, dbhandle, dbmeta, **options):
         self.loghandler = log
 
-        self.dbsession = dbsession
+        self.dbhandle = dbhandle
         self.dbmeta = dbmeta
 
         self.known_domains = Table('known_domains',
@@ -66,11 +67,17 @@ class mailfilter(__filter.mailfilter):
                 testdomain = '.'.join(domainparts[i:len(domainparts)])
                 self.loghandler.output("Testing %s" % (testdomain), 10)
 
-                if self.dbsession.query(self.known_domains).filter(
-                                self.known_domains.c.domain == testdomain
-                ).count() > 0:
+                if self.dbhandle.execute(
+                            sql.select(
+                                    [sql.func.count(self.known_domains.c.domain)]
+                            ).where(
+                                    self.known_domains.c.domain == testdomain
+                            )
+                        ).scalar():
                     unknown = False
                     break
+        else:
+            domain = header['From']
 
         if unknown:
             flags = handler.get_flags(id)[id]

@@ -21,6 +21,7 @@ import socket
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.pool
+import sqlalchemy.sql as sql
 import traceback
 from email.parser import HeaderParser
 
@@ -136,22 +137,13 @@ else:
 
 # Establish and connect to SQLAlchemy Database
 dbengine = sqlalchemy.create_engine(config.get('database', 'engine'),
-                                    *dboptions)
+                                    **dboptions)
 
 dbmeta = sqlalchemy.MetaData()
-dbsessionmaker = sqlalchemy.orm.sessionmaker(autoflush=True)
 dbmeta.bind = dbengine
-dbsessionmaker.bind = dbengine
-
-dbengine.connect()
 
 # Create table to hold persistent mail list between runs.
 db_inbox_list = sqlalchemy.Table('inbox_list', dbmeta, sqlalchemy.Column('id', sqlalchemy.Integer))
-dbsession = dbsessionmaker()
-
-# basic status info so we know it started
-# TODO: add functionality to silence non-debug communications
-print("Established Database Connection.")
 
 # log into IMAP and get server handle
 server = server_login(config)
@@ -202,8 +194,14 @@ with open(pluginfile, 'r') as pluginindexfile:
                 # Create instance of mailfilter class present in each plugin.
                 # store in "filter" object alongside the module handle
                 pluginindex[pluginname]['filter'] = pluginindex[pluginname]['module'].mailfilter(
-                        server, loghandler(line.strip(), logqueue=logthread.queue),
-                        dbsession=dbsession, dbmeta=dbmeta, config=config)
+                        server,
+                        loghandler(line.strip(),
+                                    logqueue=logthread.queue
+                                   ),
+                        dbhandle=dbengine,
+                        dbmeta=dbmeta,
+                        config=config
+                )
 
                 # Filters list serves for tracking the order of filters run.
                 filters.append(pluginname)
@@ -228,12 +226,17 @@ print("%d Plugins Loaded." % (len(filters)))
 dbmeta.create_all()
 print("Loaded all database tables.")
 
-# Commit in case any new tables were formed.
-dbsession.commit()
+# Connect to database
+dbengine.connect()
+
+# basic status info so we know it started
+# TODO: add functionality to silence non-debug communications
+print("Established Database Connection.")
 
 # Collect archived email list from server before continuing.
+# TODO: change to use in_ comparisons for checking
 past_emails = []
-for entry in dbsession.query(db_inbox_list).all():
+for entry in dbengine.execute(sql.select([db_inbox_list.c.id])):
     past_emails.append(entry.id)
 
 # Parse every plugin's prepare module to perform any tasks that require tables
@@ -355,11 +358,11 @@ while True:
     if not error:
         # Remove all old ids from the persistence database.
         # They will be re-added during the cycle as each new id is processed.
-        dbsession.execute(db_inbox_list.delete())
+        dbengine.execute(db_inbox_list.delete())
 
         # Cycle through each msgid to check for new and to pass to filters
         for msgid in messages:
-            dbsession.execute(db_inbox_list.insert().values(id=msgid))
+            dbengine.execute(db_inbox_list.insert().values(id=msgid))
 
             # If it's in past_emails, then we've seen it before, ignore.
             if msgid not in past_emails:
@@ -402,9 +405,6 @@ while True:
         # When done, add list of ids to past_emails list so we know these have
         # all been handled.
         past_emails = messages
-
-        # Commit changes to the database.
-        dbsession.commit()
 
         if args.once:
             print("Completed run, exiting loop due to --once")

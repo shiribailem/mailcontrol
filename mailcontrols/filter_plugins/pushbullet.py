@@ -25,6 +25,8 @@ from datetime import datetime
 
 import requests
 from sqlalchemy import Table, Column, Integer, String, Index
+from sqlalchemy import and_, or_, not_
+import sqlalchemy.sql as sql
 
 from mailcontrols.filter_plugins import __filter
 
@@ -32,7 +34,7 @@ from mailcontrols.filter_plugins import __filter
 # TODO: Add database functionality for selective notifications
 
 class mailfilter(__filter.mailfilter):
-    def __init__(self, handle, log, dbsession, dbmeta, config, **options):
+    def __init__(self, handle, log, dbhandle, dbmeta, config, **options):
         self.loghandler = log
 
         if not config.has_section('pushbullet') or not config.has_option('pushbullet', 'access_token'):
@@ -45,7 +47,7 @@ class mailfilter(__filter.mailfilter):
         else:
             self.notify_all = True
 
-        self.dbsession = dbsession
+        self.dbhandle = dbhandle
         self.dbmeta = dbmeta
 
         self.push_filter = Table('push_filter', self.dbmeta,
@@ -70,34 +72,57 @@ class mailfilter(__filter.mailfilter):
         return None
 
     def filter(self, handler, msgid, header):
-        basequery = self.dbsession.query(self.push_filter). \
-            order_by(
+        basequery = self.push_filter.select().order_by(
                 self.push_filter.c.username.desc(),
                 self.push_filter.c.subject.desc()
-        )
+            )
 
         address = header['From'].split('<')[-1].split('>')[0].strip().lower()
         username, domain = address.split('@')
 
-        notify = self.notify_all
+        if not self.notify_all:
+            results = self.dbhandle.execute(basequery.where(
+                            and_(
+                                self.push_filter.c.username == username,
+                                self.push_filter.c.domain == domain,
+                                self.push_filter.c.subject != None
+                                )
+                            )
+                        )
 
-        results = basequery.filter_by(username=username, domain=domain).all()
+            rule = None
 
-        domainparts = domain.split('.')
-        for i in range(-(len(domainparts)), 0):
-            testdomain = '.'.join(domainparts[i:len(domainparts)])
-            self.loghandler.output("Testing %s" % testdomain, 10)
+            for entry in results:
+                if re.search(entry.subject, header["Subject"]):
+                    rule = entry
 
-            results.extend(basequery.filter_by(
-                    domain=testdomain,
-                    username=None
-            ).all())
+            if rule is None:
 
-        result = self.__check_rules(header, results)
+                domainparts = domain.split('.')
+                for i in range(-(len(domainparts)), 0):
+                    testdomain = '.'.join(domainparts[i:len(domainparts)])
+                    self.loghandler.output("Testing %s" % testdomain, 10)
 
-        if notify or result:
-            if result:
-                title = result.title
+                    results.extend(basequery.filter_by(
+                            domain=testdomain,
+                            username=None
+                    ).all())
+
+                    rule = self.dbhandle.execute(basequery.where(
+                            and_(
+                                self.push_filter.c.username == username,
+                                self.push_filter.c.domain == testdomain,
+                                self.push_filter.c.subject == None
+                                )
+                            )
+                        ).first()
+
+                    if rule is not None:
+                        break
+
+        if self.notify_all or rule:
+            if rule:
+                title = rule.title
             else:
                 title = "New Email"
 
