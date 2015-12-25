@@ -82,13 +82,22 @@ class mailfilter(__filter.mailfilter):
 
         if not self.notify_all:
             results = self.dbhandle.execute(basequery.where(
-                            and_(
-                                self.push_filter.c.username == username,
-                                self.push_filter.c.domain == domain,
-                                self.push_filter.c.subject != None
+                            or_(
+                                and_(
+                                    self.push_filter.c.username == username,
+                                    self.push_filter.c.domain == domain,
+                                    self.push_filter.c.subject != None
+                                    )
+                                ,
+                                and_(
+                                    self.push_filter.c.username == None,
+                                    self.push_filter.c.domain == domain,
+                                    self.push_filter.c.subject != None
+                                    )
                                 )
                             )
                         )
+
 
             rule = None
 
@@ -104,10 +113,18 @@ class mailfilter(__filter.mailfilter):
                     self.loghandler.output("Testing %s" % testdomain, 10)
 
                     rule = self.dbhandle.execute(basequery.where(
-                            and_(
-                                self.push_filter.c.username == username,
-                                self.push_filter.c.domain == testdomain,
-                                self.push_filter.c.subject == None
+                            or_(
+                                and_(
+                                    self.push_filter.c.username == username,
+                                    self.push_filter.c.domain == testdomain,
+                                    self.push_filter.c.subject != None
+                                    )
+                                ,
+                                and_(
+                                    self.push_filter.c.username == None,
+                                    self.push_filter.c.domain == testdomain,
+                                    self.push_filter.c.subject != None
+                                    )
                                 )
                             )
                         ).first()
