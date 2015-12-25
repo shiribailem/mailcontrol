@@ -8,7 +8,11 @@ filters = {}
 
 @bottle.route("/")
 def index():
-    return "Welcome!"
+    return "<html>" \
+           "<body>" \
+           "<a href='/filters'>Filters</a>" \
+           "</body>" \
+           "</html>"
 
 @bottle.route("/filters")
 def filter_list():
