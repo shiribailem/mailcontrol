@@ -96,10 +96,18 @@ class mailfilter(__filter.mailfilter):
         filter_match = False
 
         results = self.dbhandle.execute(basequery.where(
-                        and_(
-                            self.auto_filter.c.username == username,
-                            self.auto_filter.c.domain == domain,
-                            self.auto_filter.c.subject != None
+                        or_(
+                            and_(
+                                self.auto_filter.c.username == username,
+                                self.auto_filter.c.domain == domain,
+                                self.auto_filter.c.subject != None
+                                )
+                            ,
+                            and_(
+                                self.auto_filter.c.username == None,
+                                self.auto_filter.c.domain == domain,
+                                self.auto_filter.c.subject != None
+                                )
                             )
                         )
                     )
@@ -109,6 +117,7 @@ class mailfilter(__filter.mailfilter):
         for entry in results:
             if re.search(entry.subject, header["Subject"]):
                 rule = entry
+                break
 
         if rule is None:
 
@@ -130,6 +139,10 @@ class mailfilter(__filter.mailfilter):
                     break
 
         if rule:
+            self.loghandler.output(
+                "Rule matched for %s: %s" % (
+                    header['From'], header['Subject']), 10)
+
             if rule.seen:
                 handler.set_flags(msgid, '\\seen')
             if rule.folder is not None:
