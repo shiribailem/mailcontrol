@@ -117,13 +117,13 @@ class mailfilter(__filter.mailfilter):
                                 and_(
                                     self.push_filter.c.username == username,
                                     self.push_filter.c.domain == testdomain,
-                                    self.push_filter.c.subject != None
+                                    self.push_filter.c.subject == None
                                     )
                                 ,
                                 and_(
                                     self.push_filter.c.username == None,
                                     self.push_filter.c.domain == testdomain,
-                                    self.push_filter.c.subject != None
+                                    self.push_filter.c.subject == None
                                     )
                                 )
                             )
