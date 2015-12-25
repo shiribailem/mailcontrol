@@ -1,4 +1,11 @@
 __0.3 Unstable__
+__2015-12-24__
+
+* Refactored application to remove all database sessions (queries are now done without sessions)
+* Removed all SQLAlchemy ORM implementation (may add handles later for plugins that desire it) now using only Core
+* Added fix for SQLite threading usage
+
+__0.3 Unstable__
 __2015-12-23__
 
 * Modified "Unknown Domain" to automatically flag emails not containing an @ in the from field
