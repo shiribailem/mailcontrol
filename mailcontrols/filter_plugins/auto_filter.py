@@ -127,10 +127,18 @@ class mailfilter(__filter.mailfilter):
                 self.loghandler.output("Testing %s" % testdomain, 10)
 
                 rule = self.dbhandle.execute(basequery.where(
-                        and_(
-                            self.auto_filter.c.username == username,
-                            self.auto_filter.c.domain == testdomain,
-                            self.auto_filter.c.subject == None
+                        or_(
+                            and_(
+                                self.auto_filter.c.username == username,
+                                self.auto_filter.c.domain == testdomain,
+                                self.auto_filter.c.subject == None
+                                )
+                            ,
+                            and_(
+                                self.auto_filter.c.username == None,
+                                self.auto_filter.c.domain == testdomain,
+                                self.auto_filter.c.subject == None
+                                )
                             )
                         )
                     ).first()
