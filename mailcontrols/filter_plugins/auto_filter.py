@@ -85,12 +85,10 @@ class mailfilter(__filter.mailfilter):
         return None
 
     def filter(self, handler, msgid, header):
-        basequery = self.dbhandle.execute(
-                self.auto_filter.select().order_by(
-                    self.auto_filter.c.username.desc(),
-                    self.auto_filter.c.subject.desc()
-                )
-            )
+        basequery = self.auto_filter.select().order_by(
+                        self.auto_filter.c.username.desc(),
+                        self.auto_filter.c.subject.desc()
+                    )
 
         address = header['From'].split('<')[-1].split('>')[0].strip().lower()
         username, domain = address.split('@')
