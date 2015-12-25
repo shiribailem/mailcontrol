@@ -20,6 +20,7 @@ import argparse
 import socket
 import sqlalchemy
 import sqlalchemy.orm
+import sqlalchemy.pool
 import traceback
 from email.parser import HeaderParser
 
@@ -118,9 +119,24 @@ config.set('mailcontrols', 'addresses'
 # times.
 hparser = HeaderParser()
 
+# Temporary workaround for thread handling in sqlite
+if "sqlite" == config.get('database', 'engine')[0:6]:
+    dboptions = {
+        "pool_size": 1,
+        "max_overflow": 0,
+        "connect_args": {
+            "check_same_thread": False
+        },
+        "poolclass": sqlalchemy.pool.QueuePool
+    }
+else:
+    dboptions = {
+        "pool_recycle": 3600
+    }
+
 # Establish and connect to SQLAlchemy Database
 dbengine = sqlalchemy.create_engine(config.get('database', 'engine'),
-                                    pool_recycle=3600)
+                                    *dboptions)
 
 dbmeta = sqlalchemy.MetaData()
 dbsessionmaker = sqlalchemy.orm.sessionmaker(autoflush=True)
@@ -339,11 +355,11 @@ while True:
     if not error:
         # Remove all old ids from the persistence database.
         # They will be re-added during the cycle as each new id is processed.
-        db_inbox_list.delete().execute()
+        dbsession.execute(db_inbox_list.delete())
 
         # Cycle through each msgid to check for new and to pass to filters
         for msgid in messages:
-            db_inbox_list.insert().values(id=msgid).execute()
+            dbsession.execute(db_inbox_list.insert().values(id=msgid))
 
             # If it's in past_emails, then we've seen it before, ignore.
             if msgid not in past_emails:
