@@ -20,6 +20,7 @@ def filter_list():
     return Template(
             "<html>"
             "<body>"
+            "<a href='/'>Home</a><br/><br/>"
             "{% for item in filters %}"
             "<a href='/filters/{{ item }}'>{{ item }}</a><br/>"
             "{% endfor %}"
