@@ -119,11 +119,6 @@ class mailfilter(__filter.mailfilter):
                 testdomain = '.'.join(domainparts[i:len(domainparts)])
                 self.loghandler.output("Testing %s" % testdomain, 10)
 
-                results.extend(basequery.filter_by(
-                        domain=testdomain,
-                        username=None
-                ).all())
-
                 rule = self.dbhandle.execute(basequery.where(
                         and_(
                             self.auto_filter.c.username == username,
